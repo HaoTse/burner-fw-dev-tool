@@ -4,6 +4,11 @@
 
 #pragma once
 
+#include <vector>
+
+#include "Device.h"
+
+using namespace std;
 
 // CBurnerFWDevToolDlg dialog
 class CBurnerFWDevToolDlg : public CDialogEx
@@ -30,4 +35,9 @@ protected:
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
+private:
+public:
+	vector<Device> device_list;
+	afx_msg void OnCbnDropdownList();
+	CComboBox device_list_ctrl;
 };

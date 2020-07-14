@@ -8,6 +8,10 @@
 #include "BurnerFWDevToolDlg.h"
 #include "afxdialogex.h"
 
+#include <string>
+
+#include "utils.h"
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -26,11 +30,13 @@ CBurnerFWDevToolDlg::CBurnerFWDevToolDlg(CWnd* pParent /*=nullptr*/)
 void CBurnerFWDevToolDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
+	DDX_Control(pDX, DEVICE_LIST, device_list_ctrl);
 }
 
 BEGIN_MESSAGE_MAP(CBurnerFWDevToolDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
+	ON_CBN_DROPDOWN(DEVICE_LIST, &CBurnerFWDevToolDlg::OnCbnDropdownList)
 END_MESSAGE_MAP()
 
 
@@ -86,3 +92,34 @@ HCURSOR CBurnerFWDevToolDlg::OnQueryDragIcon()
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
+
+
+void CBurnerFWDevToolDlg::OnCbnDropdownList()
+{
+	// empty device list
+	device_list_ctrl.ResetContent();
+	// reset device_list
+	for (vector<Device>::iterator iter = device_list.begin(); iter != device_list.end(); ) {
+		iter = device_list.erase(iter);
+	}
+	vector<Device>().swap(device_list);
+
+	// set device combo box
+	try {
+		int drive_cnt = scan_physical_drive(device_list);
+		if (drive_cnt <= 0) {
+			MessageBox(_T("No device found."), _T("Error"), MB_ICONERROR);
+		}
+		else {
+			for (int i = 0; i < drive_cnt; i++) {
+				Device cur_device = device_list.at(i);
+				device_list_ctrl.InsertString(i, cur_device.showText());
+			}
+		}
+		SetDropDownHeight(&device_list_ctrl, drive_cnt);
+	}
+	catch (const exception& exp) {
+		string msg = exp.what();
+		MessageBox((LPCTSTR)CA2T(msg.c_str()), _T("Error"), MB_ICONERROR);
+	}
+}
