@@ -36,8 +36,15 @@ protected:
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
 private:
-public:
 	vector<Device> device_list;
-	afx_msg void OnCbnDropdownList();
+	Device selected_device = NULL;
+	void set_msg_edit(CString msg);
+	void setup_btns(BOOL setup);
+public:
 	CComboBox device_list_ctrl;
+	CButton scan_flh_id_btn_ctrl;
+	CEdit msg_edit_ctrl;
+	afx_msg void OnCbnDropdownList();
+	afx_msg void OnCbnSelchangeList();
+	afx_msg void OnBnClickedFlhIdBtn();
 };

@@ -185,6 +185,7 @@
   <ItemGroup>
     <ClInclude Include="BurnerFWDevTool.h" />
     <ClInclude Include="BurnerFWDevToolDlg.h" />
+    <ClInclude Include="cmd.h" />
     <ClInclude Include="Device.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="pch.h" />
@@ -196,6 +197,7 @@
   <ItemGroup>
     <ClCompile Include="BurnerFWDevTool.cpp" />
     <ClCompile Include="BurnerFWDevToolDlg.cpp" />
+    <ClCompile Include="cmd.cpp" />
     <ClCompile Include="Device.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

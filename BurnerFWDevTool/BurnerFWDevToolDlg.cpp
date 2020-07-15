@@ -11,6 +11,7 @@
 #include <string>
 
 #include "utils.h"
+#include "cmd.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -31,12 +32,17 @@ void CBurnerFWDevToolDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, DEVICE_LIST, device_list_ctrl);
+	DDX_Control(pDX, SCAN_FLH_ID_BTN, scan_flh_id_btn_ctrl);
+	//  DDX_Control(pDX, MSG_EDIT, msg_edit_ctrl);
+	DDX_Control(pDX, MSG_EDIT, msg_edit_ctrl);
 }
 
 BEGIN_MESSAGE_MAP(CBurnerFWDevToolDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_CBN_DROPDOWN(DEVICE_LIST, &CBurnerFWDevToolDlg::OnCbnDropdownList)
+	ON_CBN_SELCHANGE(DEVICE_LIST, &CBurnerFWDevToolDlg::OnCbnSelchangeList)
+	ON_BN_CLICKED(SCAN_FLH_ID_BTN, &CBurnerFWDevToolDlg::OnBnClickedFlhIdBtn)
 END_MESSAGE_MAP()
 
 
@@ -52,6 +58,7 @@ BOOL CBurnerFWDevToolDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
 	// TODO: Add extra initialization here
+	setup_btns(FALSE);
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -93,6 +100,18 @@ HCURSOR CBurnerFWDevToolDlg::OnQueryDragIcon()
 }
 
 
+void CBurnerFWDevToolDlg::set_msg_edit(CString msg)
+{
+	msg_edit_ctrl.SetSel(-1, -1);
+	msg_edit_ctrl.ReplaceSel(msg);
+	msg_edit_ctrl.PostMessage(WM_VSCROLL, SB_BOTTOM, 0); // scroll location
+}
+
+void CBurnerFWDevToolDlg::setup_btns(BOOL setup)
+{
+	scan_flh_id_btn_ctrl.EnableWindow(setup);
+}
+
 
 void CBurnerFWDevToolDlg::OnCbnDropdownList()
 {
@@ -122,4 +141,48 @@ void CBurnerFWDevToolDlg::OnCbnDropdownList()
 		string msg = exp.what();
 		MessageBox((LPCTSTR)CA2T(msg.c_str()), _T("Error"), MB_ICONERROR);
 	}
+}
+
+
+void CBurnerFWDevToolDlg::OnCbnSelchangeList()
+{
+	// check if select device
+	DWORD selected_device_idx = device_list_ctrl.GetCurSel();
+	if (selected_device_idx == CB_ERR) {
+		setup_btns(FALSE);
+		MessageBox(_T("Please select a device."), _T("Error"), MB_ICONERROR);
+		return;
+	}
+
+	setup_btns(TRUE);
+	selected_device = device_list.at(selected_device_idx);
+}
+
+
+void CBurnerFWDevToolDlg::OnBnClickedFlhIdBtn()
+{
+	// check if select device
+	DWORD selected_device_idx = device_list_ctrl.GetCurSel();
+	if (selected_device_idx == CB_ERR) {
+		setup_btns(FALSE);
+		MessageBox(_T("Please select a device."), _T("Error"), MB_ICONERROR);
+		return;
+	}
+
+	/*
+	 * scan flash id
+	 */
+	set_msg_edit(_T("Start scan flash id.\n"));
+	HANDLE hDrive = selected_device.openDevice();
+
+	// issue AP key
+	if (!issue_AP_Key_Set(hDrive)) {
+		set_msg_edit(_T("\tAP Key Set failed.\n"));
+		set_msg_edit(_T("End scan flash id.\n"));
+		MessageBox(_T("Scan flash id failed."), _T("Error"), MB_ICONERROR);
+		CloseHandle(hDrive);
+		return;
+	}
+
+	CloseHandle(hDrive);
 }

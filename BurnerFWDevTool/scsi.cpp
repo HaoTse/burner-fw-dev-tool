@@ -22,7 +22,7 @@ BOOL issue_SCSI(HANDLE hDrive, LPBYTE Cdb, UINT CdbLen, LPBYTE buffer, UINT buff
 	DWORD lastErr = 0;
 
 	// value check
-	if (!buffer || !buffSize) {
+	if ((!buffer && buffSize) || (buffer && !buffSize)) {
 		TRACE("\n[Error] Buffer setup error.\n");
 		return FALSE;
 	}
@@ -71,3 +71,57 @@ BOOL issue_SCSI(HANDLE hDrive, LPBYTE Cdb, UINT CdbLen, LPBYTE buffer, UINT buff
 	else
 		return TRUE;
 }
+
+BOOL send_payload(HANDLE hDrive, LPBYTE payload_buf, UINT transf_len, UINT admin)
+{
+	UINT cdb_len = 16;
+	LPBYTE cdb = new BYTE[cdb_len];
+	RtlZeroMemory(cdb, cdb_len);
+
+	cdb[0] = 0xa1; // operation code
+	cdb[1] = (byte)((admin << 7) + 0); // ADMIN + PROTOCOL
+	cdb[3] = (byte)((transf_len >> 16) & 0xff); // PARAMETER LIST LENGTH (23:16)
+	cdb[4] = (byte)((transf_len >> 8) & 0xff);  // PARAMETER LIST LENGTH (23:16)
+	cdb[5] = (byte)(transf_len & 0xff);			// PARAMETER LIST LENGTH (23:16)
+
+	BOOL ret = issue_SCSI(hDrive, cdb, cdb_len, payload_buf, transf_len, SCSI_WRITE);
+	delete[] cdb;
+
+	return ret;
+}
+
+BOOL send_non_data(HANDLE hDrive, UINT admin)
+{
+	UINT cdb_len = 16;
+	LPBYTE cdb = new BYTE[cdb_len];
+	RtlZeroMemory(cdb, cdb_len);
+
+	cdb[0] = 0xa1; // operation code
+	cdb[1] = (byte)((admin << 7) + 1); // ADMIN + PROTOCOL (Non-data)
+
+	BOOL ret = issue_SCSI(hDrive, cdb, cdb_len, nullptr, 0, SCSI_READ);
+	delete[] cdb;
+
+	return ret;
+}
+
+BOOL send_return_response(HANDLE hDrive, LPBYTE response_buf, UINT transf_len, UINT admin)
+{
+	UINT cdb_len = 16;
+	LPBYTE cdb = new BYTE[cdb_len];
+	RtlZeroMemory(cdb, cdb_len);
+
+	cdb[0] = 0xa1; // operation code
+	cdb[1] = (byte)((admin << 7) + 15); // ADMIN + PROTOCOL (return response information)
+	cdb[3] = (byte)((transf_len >> 16) & 0xff); // PARAMETER LIST LENGTH (23:16)
+	cdb[4] = (byte)((transf_len >> 8) & 0xff);  // PARAMETER LIST LENGTH (23:16)
+	cdb[5] = (byte)(transf_len & 0xff);			// PARAMETER LIST LENGTH (23:16)
+
+	BOOL ret = issue_SCSI(hDrive, cdb, cdb_len, response_buf, transf_len, SCSI_READ);
+	delete[] cdb;
+
+	return ret;
+}
+
+
+

@@ -21,7 +21,7 @@ int scan_physical_drive(vector<Device>& device_list, int limit_cnt)
 			LPBYTE cdb = get_inquiry_cdb_command();
 			LPBYTE buffer = new BYTE[buffer_size];
 
-			if (!issue_SCSI(hDevice, cdb, cdb_length, buffer, buffer_size, FALSE)) {
+			if (!issue_SCSI(hDevice, cdb, cdb_length, buffer, buffer_size, SCSI_READ)) {
 				delete[] cdb;
 				delete[] buffer;
 				CString err_msg;
