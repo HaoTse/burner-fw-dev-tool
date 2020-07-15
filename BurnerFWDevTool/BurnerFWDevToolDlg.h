@@ -38,12 +38,14 @@ protected:
 private:
 	vector<Device> device_list;
 	Device selected_device = NULL;
-	void set_msg_edit(CString msg);
+	void insert_msg_edit(CString msg);
+	void insert_buffer_result_edit(CString msg);
 	void setup_btns(BOOL setup);
 public:
 	CComboBox device_list_ctrl;
 	CButton scan_flh_id_btn_ctrl;
 	CEdit msg_edit_ctrl;
+	CEdit buf_result_edit_ctrl;
 	afx_msg void OnCbnDropdownList();
 	afx_msg void OnCbnSelchangeList();
 	afx_msg void OnBnClickedFlhIdBtn();

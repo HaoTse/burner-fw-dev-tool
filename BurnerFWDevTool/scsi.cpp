@@ -90,6 +90,24 @@ BOOL send_payload(HANDLE hDrive, LPBYTE payload_buf, UINT transf_len, UINT admin
 	return ret;
 }
 
+BOOL send_read_data(HANDLE hDrive, LPBYTE data_buf, UINT transf_len, UINT admin)
+{
+	UINT cdb_len = 16;
+	LPBYTE cdb = new BYTE[cdb_len];
+	RtlZeroMemory(cdb, cdb_len);
+
+	cdb[0] = 0xa1; // operation code
+	cdb[1] = (byte)((admin << 7) + 2); // ADMIN + PROTOCOL (DMA-IN)
+	cdb[3] = (byte)((transf_len >> 16) & 0xff); // PARAMETER LIST LENGTH (23:16)
+	cdb[4] = (byte)((transf_len >> 8) & 0xff);  // PARAMETER LIST LENGTH (23:16)
+	cdb[5] = (byte)(transf_len & 0xff);			// PARAMETER LIST LENGTH (23:16)
+
+	BOOL ret = issue_SCSI(hDrive, cdb, cdb_len, data_buf, transf_len, SCSI_READ);
+	delete[] cdb;
+
+	return ret;
+}
+
 BOOL send_non_data(HANDLE hDrive, UINT admin)
 {
 	UINT cdb_len = 16;

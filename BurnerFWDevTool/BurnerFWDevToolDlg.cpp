@@ -33,8 +33,8 @@ void CBurnerFWDevToolDlg::DoDataExchange(CDataExchange* pDX)
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, DEVICE_LIST, device_list_ctrl);
 	DDX_Control(pDX, SCAN_FLH_ID_BTN, scan_flh_id_btn_ctrl);
-	//  DDX_Control(pDX, MSG_EDIT, msg_edit_ctrl);
 	DDX_Control(pDX, MSG_EDIT, msg_edit_ctrl);
+	DDX_Control(pDX, BUF_RESULT_EDIT, buf_result_edit_ctrl);
 }
 
 BEGIN_MESSAGE_MAP(CBurnerFWDevToolDlg, CDialogEx)
@@ -100,11 +100,18 @@ HCURSOR CBurnerFWDevToolDlg::OnQueryDragIcon()
 }
 
 
-void CBurnerFWDevToolDlg::set_msg_edit(CString msg)
+void CBurnerFWDevToolDlg::insert_msg_edit(CString msg)
 {
 	msg_edit_ctrl.SetSel(-1, -1);
 	msg_edit_ctrl.ReplaceSel(msg);
 	msg_edit_ctrl.PostMessage(WM_VSCROLL, SB_BOTTOM, 0); // scroll location
+}
+
+void CBurnerFWDevToolDlg::insert_buffer_result_edit(CString msg)
+{
+	buf_result_edit_ctrl.SetSel(-1, -1);
+	buf_result_edit_ctrl.ReplaceSel(msg);
+	buf_result_edit_ctrl.PostMessage(WM_VSCROLL, SB_BOTTOM, 0); // scroll location
 }
 
 void CBurnerFWDevToolDlg::setup_btns(BOOL setup)
@@ -172,17 +179,46 @@ void CBurnerFWDevToolDlg::OnBnClickedFlhIdBtn()
 	/*
 	 * scan flash id
 	 */
-	set_msg_edit(_T("Start scan flash id.\n"));
+	insert_msg_edit(_T("Start scan flash id.\n"));
 	HANDLE hDrive = selected_device.openDevice();
 
 	// issue AP key
 	if (!issue_AP_Key_Set(hDrive)) {
-		set_msg_edit(_T("\tAP Key Set failed.\n"));
-		set_msg_edit(_T("End scan flash id.\n"));
+		insert_msg_edit(_T("\tAP Key Set failed.\n"));
+		insert_msg_edit(_T("End scan flash id.\n"));
 		MessageBox(_T("Scan flash id failed."), _T("Error"), MB_ICONERROR);
 		CloseHandle(hDrive);
 		return;
 	}
 
+	// issue scan flash id
+	UINT buf_len = 512;
+	LPBYTE flh_id_buf = new BYTE[buf_len];
+	if (!issue_Scan_Flh_ID(hDrive, flh_id_buf, buf_len)) {
+		insert_msg_edit(_T("\tScan flash ID failed.\n"));
+		insert_msg_edit(_T("End scan flash id.\n"));
+		MessageBox(_T("Scan flash id failed."), _T("Error"), MB_ICONERROR);
+		CloseHandle(hDrive);
+		return;
+	}
+
+	// show flash id buffer
+	buf_result_edit_ctrl.SetWindowText(_T(""));
+	for (UINT i = 0; i < (buf_len >> 4); i++) {
+		CString str = _T(""), tmp;
+		for (UINT j = 0; j < 16; j++) {
+			UINT cur_idx = (i << 4) + j;
+			tmp.Format(_T("%02x "), flh_id_buf[cur_idx]);
+			str += tmp;
+		}
+		str += _T("\n");
+		insert_buffer_result_edit(str);
+	}
+	delete[] flh_id_buf;
+
+	insert_msg_edit(_T("End scan flash id.\n"));
+	MessageBox(_T("Scan flash id succeed."), _T("Information"), MB_ICONINFORMATION);
 	CloseHandle(hDrive);
+
 }
+
