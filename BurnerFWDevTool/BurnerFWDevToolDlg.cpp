@@ -35,6 +35,9 @@ void CBurnerFWDevToolDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, SCAN_FLH_ID_BTN, scan_flh_id_btn_ctrl);
 	DDX_Control(pDX, MSG_EDIT, msg_edit_ctrl);
 	DDX_Control(pDX, BUF_RESULT_EDIT, buf_result_edit_ctrl);
+	DDX_Control(pDX, CE_EDIT, ce_edit_ctrl);
+	DDX_Control(pDX, BLOCK_EDIT, block_edit_ctrl);
+	DDX_Control(pDX, ERASE_BTN, erase_btn_ctrl);
 }
 
 BEGIN_MESSAGE_MAP(CBurnerFWDevToolDlg, CDialogEx)
@@ -43,6 +46,7 @@ BEGIN_MESSAGE_MAP(CBurnerFWDevToolDlg, CDialogEx)
 	ON_CBN_DROPDOWN(DEVICE_LIST, &CBurnerFWDevToolDlg::OnCbnDropdownList)
 	ON_CBN_SELCHANGE(DEVICE_LIST, &CBurnerFWDevToolDlg::OnCbnSelchangeList)
 	ON_BN_CLICKED(SCAN_FLH_ID_BTN, &CBurnerFWDevToolDlg::OnBnClickedFlhIdBtn)
+	ON_BN_CLICKED(ERASE_BTN, &CBurnerFWDevToolDlg::OnBnClickedEraseBtn)
 END_MESSAGE_MAP()
 
 
@@ -141,8 +145,8 @@ void CBurnerFWDevToolDlg::OnCbnDropdownList()
 				Device cur_device = device_list.at(i);
 				device_list_ctrl.InsertString(i, cur_device.showText());
 			}
+			SetDropDownHeight(&device_list_ctrl, drive_cnt);
 		}
-		SetDropDownHeight(&device_list_ctrl, drive_cnt);
 	}
 	catch (const exception& exp) {
 		string msg = exp.what();
@@ -222,3 +226,68 @@ void CBurnerFWDevToolDlg::OnBnClickedFlhIdBtn()
 
 }
 
+
+
+void CBurnerFWDevToolDlg::OnBnClickedEraseBtn()
+{
+	// check value
+	CString tmp;
+	DWORD selected_ce, selected_blk;
+	DWORD selected_device_idx = device_list_ctrl.GetCurSel();
+	if (selected_device_idx == CB_ERR) {
+		setup_btns(FALSE);
+		MessageBox(_T("Please select a device."), _T("Error"), MB_ICONERROR);
+		return;
+	}
+
+	ce_edit_ctrl.GetWindowText(tmp);
+	if (tmp.IsEmpty()) {
+		MessageBox(_T("Must input CE."), _T("Error"), MB_ICONERROR);
+		return;
+	}
+	selected_ce = _ttoi(tmp);
+	
+	block_edit_ctrl.GetWindowText(tmp);
+	if (tmp.IsEmpty()) {
+		MessageBox(_T("Must input block."), _T("Error"), MB_ICONERROR);
+		return;
+	}
+	selected_blk = _ttoi(tmp);
+
+	/*
+	 * erase
+	 */
+	CString cur_op = _T("Erase"), msg;
+	msg.Format(_T("Start %s.\n"), cur_op);
+	insert_msg_edit(msg);
+	HANDLE hDrive = selected_device.openDevice();
+
+	// issue AP key
+	if (!issue_AP_Key_Set(hDrive)) {
+		insert_msg_edit(_T("\tAP Key Set failed.\n"));
+		msg.Format(_T("End %s.\n"), cur_op);
+		insert_msg_edit(msg);
+		msg.Format(_T("%s failed.\n"), cur_op);
+		MessageBox(msg, _T("Error"), MB_ICONERROR);
+		CloseHandle(hDrive);
+		return;
+	}
+
+	// issue erase
+	if (!issue_Erase(hDrive, selected_ce, selected_blk)) {
+		msg.Format(_T("\t%s failed.\n"), cur_op);
+		insert_msg_edit(msg);
+		msg.Format(_T("End %s.\n"), cur_op);
+		insert_msg_edit(msg);
+		msg.Format(_T("%s failed.\n"), cur_op);
+		MessageBox(msg, _T("Error"), MB_ICONERROR);
+		CloseHandle(hDrive);
+		return;
+	}
+
+	msg.Format(_T("End %s.\n"), cur_op);
+	insert_msg_edit(msg);
+	msg.Format(_T("%s succeed.\n"), cur_op); 
+	MessageBox(msg, _T("Information"), MB_ICONINFORMATION);
+	CloseHandle(hDrive);
+}

@@ -46,7 +46,11 @@ public:
 	CButton scan_flh_id_btn_ctrl;
 	CEdit msg_edit_ctrl;
 	CEdit buf_result_edit_ctrl;
+	CEdit ce_edit_ctrl;
+	CEdit block_edit_ctrl;
+	CButton erase_btn_ctrl;
 	afx_msg void OnCbnDropdownList();
 	afx_msg void OnCbnSelchangeList();
 	afx_msg void OnBnClickedFlhIdBtn();
+	afx_msg void OnBnClickedEraseBtn();
 };
