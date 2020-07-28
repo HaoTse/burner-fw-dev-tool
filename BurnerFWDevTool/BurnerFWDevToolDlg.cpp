@@ -103,6 +103,11 @@ HCURSOR CBurnerFWDevToolDlg::OnQueryDragIcon()
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
+void CBurnerFWDevToolDlg::setup_btns(BOOL setup)
+{
+	scan_flh_id_btn_ctrl.EnableWindow(setup);
+}
+
 
 void CBurnerFWDevToolDlg::insert_msg_edit(CString msg)
 {
@@ -118,9 +123,19 @@ void CBurnerFWDevToolDlg::insert_buffer_result_edit(CString msg)
 	buf_result_edit_ctrl.PostMessage(WM_VSCROLL, SB_BOTTOM, 0); // scroll location
 }
 
-void CBurnerFWDevToolDlg::setup_btns(BOOL setup)
+void CBurnerFWDevToolDlg::show_buffer_result(LPBYTE buf, UINT len)
 {
-	scan_flh_id_btn_ctrl.EnableWindow(setup);
+	buf_result_edit_ctrl.SetWindowText(_T(""));
+	for (UINT i = 0; i < (len >> 4); i++) {
+		CString str = _T(""), tmp;
+		for (UINT j = 0; j < 16; j++) {
+			UINT cur_idx = (i << 4) + j;
+			tmp.Format(_T("%02x "), buf[cur_idx]);
+			str += tmp;
+		}
+		str += _T("\n");
+		insert_buffer_result_edit(str);
+	}
 }
 
 
@@ -194,6 +209,7 @@ void CBurnerFWDevToolDlg::OnBnClickedFlhIdBtn()
 		CloseHandle(hDrive);
 		return;
 	}
+	insert_msg_edit(_T("\tAP Key Set finished.\n"));
 
 	// issue scan flash id
 	UINT buf_len = 512;
@@ -205,19 +221,10 @@ void CBurnerFWDevToolDlg::OnBnClickedFlhIdBtn()
 		CloseHandle(hDrive);
 		return;
 	}
+	insert_msg_edit(_T("\tScan flash ID finished.\n"));
 
 	// show flash id buffer
-	buf_result_edit_ctrl.SetWindowText(_T(""));
-	for (UINT i = 0; i < (buf_len >> 4); i++) {
-		CString str = _T(""), tmp;
-		for (UINT j = 0; j < 16; j++) {
-			UINT cur_idx = (i << 4) + j;
-			tmp.Format(_T("%02x "), flh_id_buf[cur_idx]);
-			str += tmp;
-		}
-		str += _T("\n");
-		insert_buffer_result_edit(str);
-	}
+	show_buffer_result(flh_id_buf, buf_len);
 	delete[] flh_id_buf;
 
 	insert_msg_edit(_T("End scan flash id.\n"));
@@ -272,6 +279,7 @@ void CBurnerFWDevToolDlg::OnBnClickedEraseBtn()
 		CloseHandle(hDrive);
 		return;
 	}
+	insert_msg_edit(_T("\tAP Key Set finished.\n"));
 
 	// issue erase
 	if (!issue_Erase(hDrive, selected_ce, selected_blk)) {
@@ -284,10 +292,42 @@ void CBurnerFWDevToolDlg::OnBnClickedEraseBtn()
 		CloseHandle(hDrive);
 		return;
 	}
+	msg.Format(_T("\t%s finished.\n"), cur_op);
+	insert_msg_edit(msg);
+
+	// issue AP key
+	if (!issue_AP_Key_Set(hDrive)) {
+		insert_msg_edit(_T("\tAP Key Set failed.\n"));
+		msg.Format(_T("End %s.\n"), cur_op);
+		insert_msg_edit(msg);
+		msg.Format(_T("%s failed.\n"), cur_op);
+		MessageBox(msg, _T("Error"), MB_ICONERROR);
+		CloseHandle(hDrive);
+		return;
+	}
+	insert_msg_edit(_T("\tAP Key Set finished.\n"));
+
+	// issue read status
+	UINT buf_len = 32;
+	LPBYTE status_buf = new BYTE[buf_len];
+	if (!issue_Read_Status(hDrive, status_buf, buf_len)) {
+		insert_msg_edit(_T("\tRead status failed.\n"));
+		msg.Format(_T("End %s.\n"), cur_op);
+		insert_msg_edit(msg);
+		msg.Format(_T("%s failed.\n"), cur_op);
+		MessageBox(msg, _T("Error"), MB_ICONERROR);
+		CloseHandle(hDrive);
+		return;
+	}
+	insert_msg_edit(_T("\tShow 32byte status.\n"));
+
+	// show status buffer
+	show_buffer_result(status_buf, buf_len);
+	delete[] status_buf;
 
 	msg.Format(_T("End %s.\n"), cur_op);
 	insert_msg_edit(msg);
-	msg.Format(_T("%s succeed.\n"), cur_op); 
+	msg.Format(_T("%s finished.\n"), cur_op); 
 	MessageBox(msg, _T("Information"), MB_ICONINFORMATION);
 	CloseHandle(hDrive);
 }

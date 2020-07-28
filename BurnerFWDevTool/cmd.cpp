@@ -63,9 +63,9 @@ BOOL issue_Scan_Flh_ID(HANDLE hDrive, LPBYTE read_data_buf, UINT read_len)
 	transf_buf[3] = (byte)'E';
 	transf_buf[8] = 0xd2; // data-out opcode
 	transf_buf[0x30] = 0x80; // 0x30 = 48d (CDW10 - Ndt)
-	//transf_buf[0x38] = 0x90; // 0x38 = 56d (CDW12 - feature & sub-feature)
-	transf_buf[0x38] = 0xe3; // HT define
-	transf_buf[0x39] = 0xe0; // HT define
+	transf_buf[0x38] = 0x90; // 0x38 = 56d (CDW12 - feature & sub-feature)
+	//transf_buf[0x38] = 0xe3; // HT define
+	//transf_buf[0x39] = 0xe0; // HT define
 	transf_buf[0x46] = 0xf7; // CDW15[2:3] - CRC
 	transf_buf[0x47] = 0xd4;
 
@@ -85,6 +85,50 @@ BOOL issue_Scan_Flh_ID(HANDLE hDrive, LPBYTE read_data_buf, UINT read_len)
 		RtlZeroMemory(transf_buf, transf_len);
 		if (!send_return_response(hDrive, transf_buf, transf_len, 1)) {
 			TRACE("\n[Error] Scan flash id step 3 failed.\n");
+			break;
+		}
+		ret = TRUE;
+	} while (0);
+
+	delete[] transf_buf;
+	return ret;
+}
+
+BOOL issue_Read_Status(HANDLE hDrive, LPBYTE read_data_buf, UINT read_len)
+{
+	/*
+	 * data out (read data)
+	 */
+	UINT transf_len = 512;
+	BYTE* transf_buf = new BYTE[transf_len];
+	RtlZeroMemory(transf_buf, transf_len);
+
+	transf_buf[0] = (byte)'N';
+	transf_buf[1] = (byte)'V';
+	transf_buf[2] = (byte)'M';
+	transf_buf[3] = (byte)'E';
+	transf_buf[8] = 0xd2; // data-out opcode
+	transf_buf[0x30] = 0x80; // CDW10 - Ndt
+	transf_buf[0x38] = 0xe0; // CDW12 - feature & sub-feature
+	transf_buf[0x46] = 0xf7; // CRC
+	transf_buf[0x47] = 0xd4;
+
+	BOOL ret = FALSE;
+	do {
+		// step 1 - NVM Command Set Payload
+		if (!send_payload(hDrive, transf_buf, transf_len, 1)) {
+			TRACE("\n[Error] Read status step 1 failed.\n");
+			break;
+		}
+		// step 2 - data-out
+		if (!send_read_data(hDrive, read_data_buf, read_len, 1)) {
+			TRACE("\n[Error] Read status step 2 failed.\n");
+			break;
+		}
+		// step 3 - return response information
+		RtlZeroMemory(transf_buf, transf_len);
+		if (!send_return_response(hDrive, transf_buf, transf_len, 1)) {
+			TRACE("\n[Error] Read status step 3 failed.\n");
 			break;
 		}
 		ret = TRUE;

@@ -38,9 +38,10 @@ protected:
 private:
 	vector<Device> device_list;
 	Device selected_device = NULL;
+	void setup_btns(BOOL setup);
 	void insert_msg_edit(CString msg);
 	void insert_buffer_result_edit(CString msg);
-	void setup_btns(BOOL setup);
+	void show_buffer_result(LPBYTE buf, UINT len);
 public:
 	CComboBox device_list_ctrl;
 	CButton scan_flh_id_btn_ctrl;
