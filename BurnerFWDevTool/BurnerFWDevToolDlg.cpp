@@ -38,6 +38,8 @@ void CBurnerFWDevToolDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, CE_EDIT, ce_edit_ctrl);
 	DDX_Control(pDX, BLOCK_EDIT, block_edit_ctrl);
 	DDX_Control(pDX, ERASE_BTN, erase_btn_ctrl);
+	DDX_Control(pDX, PAGE_EDIT, page_edit_ctrl);
+	DDX_Control(pDX, PLANE_EDIT, plane_edit_ctrl);
 }
 
 BEGIN_MESSAGE_MAP(CBurnerFWDevToolDlg, CDialogEx)
@@ -239,7 +241,7 @@ void CBurnerFWDevToolDlg::OnBnClickedEraseBtn()
 {
 	// check value
 	CString tmp;
-	DWORD selected_ce, selected_blk;
+	DWORD selected_ce, selected_blk, selected_plane;
 	DWORD selected_device_idx = device_list_ctrl.GetCurSel();
 	if (selected_device_idx == CB_ERR) {
 		setup_btns(FALSE);
@@ -260,6 +262,23 @@ void CBurnerFWDevToolDlg::OnBnClickedEraseBtn()
 		return;
 	}
 	selected_blk = _ttoi(tmp);
+
+	plane_edit_ctrl.GetWindowText(tmp);
+	if (tmp.IsEmpty()) {
+		MessageBox(_T("Must input block."), _T("Error"), MB_ICONERROR);
+		return;
+	}
+	selected_plane = _ttoi(tmp);
+
+	if (selected_plane >= 2) {
+		MessageBox(_T("Only 2 plane per LUN."), _T("Error"), MB_ICONERROR);
+		return;
+	}
+	if (selected_blk > 989) {
+		MessageBox(_T("The block number is 989."), _T("Error"), MB_ICONERROR);
+		return;
+	}
+	selected_blk = selected_blk * 2 + selected_plane;
 
 	/*
 	 * erase

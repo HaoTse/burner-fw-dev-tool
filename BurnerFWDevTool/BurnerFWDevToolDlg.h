@@ -49,6 +49,8 @@ public:
 	CEdit buf_result_edit_ctrl;
 	CEdit ce_edit_ctrl;
 	CEdit block_edit_ctrl;
+	CEdit page_edit_ctrl;
+	CEdit plane_edit_ctrl;
 	CButton erase_btn_ctrl;
 	afx_msg void OnCbnDropdownList();
 	afx_msg void OnCbnSelchangeList();

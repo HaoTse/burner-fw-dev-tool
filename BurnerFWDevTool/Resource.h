@@ -11,6 +11,9 @@
 #define CE_EDIT                         1010
 #define BLOCK_EDIT                      1011
 #define ERASE_BTN                       1012
+#define PLANE_EDIT                      1013
+#define BLOCK_EDIT3                     1015
+#define PAGE_EDIT                       1015
 
 // Next default values for new objects
 // 
