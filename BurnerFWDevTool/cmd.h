@@ -10,3 +10,5 @@ BOOL issue_Read_Status(HANDLE hDrive, LPBYTE read_data_buf, UINT read_len);
 
 BOOL issue_Erase(HANDLE hDrive, UINT ce, UINT blk);
 
+BOOL issue_Read_Page(HANDLE hDrive, UINT ce, UINT blk, UINT page, LPBYTE read_data_buf, UINT read_len);
+

@@ -183,3 +183,56 @@ BOOL issue_Erase(HANDLE hDrive, UINT ce, UINT blk)
 	delete[] transf_buf;
 	return ret;
 }
+
+BOOL issue_Read_Page(HANDLE hDrive, UINT ce, UINT blk, UINT page, LPBYTE read_data_buf, UINT read_len)
+{
+	/*
+	 * data out (read data)
+	 */
+	UINT transf_len = 512;
+	BYTE* transf_buf = new BYTE[transf_len];
+	DWORD read_len_dw = read_len >> 2;
+	RtlZeroMemory(transf_buf, transf_len);
+
+	transf_buf[0] = (byte)'N';
+	transf_buf[1] = (byte)'V';
+	transf_buf[2] = (byte)'M';
+	transf_buf[3] = (byte)'E';
+	transf_buf[8] = 0xd2; // data-out opcode
+	transf_buf[0x30] = (byte)(read_len_dw & 0xff); // CDW10 - Ndt (Byte -> DWORD)
+	transf_buf[0x31] = (byte)((read_len_dw >> 8) & 0xff);
+	transf_buf[0x32] = (byte)((read_len_dw >> 16) & 0xff);
+	transf_buf[0x33] = (byte)((read_len_dw >> 24) & 0xff);
+	transf_buf[0x38] = 0xe4; // CDW12 - feature & sub-feature
+	transf_buf[0x3E] = (byte)(page & 0xff); // CDW13[2:3] - page
+	transf_buf[0x3F] = (byte)((page >> 8) & 0xff);
+	transf_buf[0x40] = (byte)(blk & 0xff); // CDW14[1:0] - block
+	transf_buf[0x41] = (byte)((blk >> 8) & 0xff);
+	transf_buf[0x43] = (byte)(ce & 0xff); // CDW14[3] - ce
+	transf_buf[0x46] = 0xf7; // CRC
+	transf_buf[0x47] = 0xd4;
+
+	BOOL ret = FALSE;
+	do {
+		// step 1 - NVM Command Set Payload
+		if (!send_payload(hDrive, transf_buf, transf_len, 1)) {
+			TRACE("\n[Error] Read status step 1 failed.\n");
+			break;
+		}
+		// step 2 - data-out
+		if (!send_read_data(hDrive, read_data_buf, read_len, 1)) {
+			TRACE("\n[Error] Read status step 2 failed.\n");
+			break;
+		}
+		// step 3 - return response information
+		RtlZeroMemory(transf_buf, transf_len);
+		if (!send_return_response(hDrive, transf_buf, transf_len, 1)) {
+			TRACE("\n[Error] Read status step 3 failed.\n");
+			break;
+		}
+		ret = TRUE;
+	} while (0);
+
+	delete[] transf_buf;
+	return ret;
+}
