@@ -3,6 +3,41 @@
 #include "utils.h"
 #include "scsi.h"
 
+void get_write_pattern(UINT page_type, LPBYTE buf, UINT len)
+{
+	if (page_type == LSB_PAGE) {
+		/*for (UINT i = 0; i < len; i++) {
+			buf[i] = (BYTE)(0xaa);
+		}*/
+		for (UINT i = 0; i < len; i++) {
+			buf[i] = (BYTE)(i & 0xFF);
+		}
+	}
+	else if (page_type == CSB_PAGE) {
+		for (UINT i = 0; i < (len >> 1); i++) {
+			buf[i << 1] = (BYTE)(i & 0xFF);
+			buf[(i << 1) + 1] = (BYTE)((i >> 8) & 0xFF);
+		}
+		if (len & 1) {
+			buf[len - 1] = (BYTE)((len >> 1) & 0xFF);
+		}
+	}
+	else {
+		//for (UINT i = 0; i < len; i++) {
+		//	buf[i] = 0x55;
+		//	/*if (i < (len >> 1)) buf[i] = 0xff;
+		//	else buf[i] = 0x00;*/
+		//}
+		for (UINT i = 0; i < (len >> 1); i++) {
+			buf[i << 1] = (BYTE)((0xFF - i) & 0xFF);
+			buf[(i << 1) + 1] = (BYTE)(((0xFF - i) >> 8) & 0xFF);
+		}
+		if (len & 1) {
+			buf[len - 1] = (BYTE)((len >> 1) & 0xFF);
+		}
+	}
+}
+
 int scan_physical_drive(vector<Device>& device_list, int limit_cnt)
 {
 	int device_cnt = 0;

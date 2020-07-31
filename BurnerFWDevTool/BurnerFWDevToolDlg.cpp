@@ -42,6 +42,9 @@ void CBurnerFWDevToolDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, PAGE_LIST, page_list_ctrl);
 	DDX_Control(pDX, WL_EDIT, wl_edit_ctrl);
 	DDX_Control(pDX, READ_PAGE_BTN, read_page_btn_ctrl);
+	DDX_Control(pDX, WRITE_BUF_PAGE_LIST, write_buf_page_list_ctrl);
+	DDX_Control(pDX, WRITE_BUF_EDIT, write_buf_edit_ctrl);
+	DDX_Control(pDX, WRITE_BTN, write_btn_ctrl);
 }
 
 BEGIN_MESSAGE_MAP(CBurnerFWDevToolDlg, CDialogEx)
@@ -49,9 +52,11 @@ BEGIN_MESSAGE_MAP(CBurnerFWDevToolDlg, CDialogEx)
 	ON_WM_QUERYDRAGICON()
 	ON_CBN_DROPDOWN(DEVICE_LIST, &CBurnerFWDevToolDlg::OnCbnDropdownList)
 	ON_CBN_SELCHANGE(DEVICE_LIST, &CBurnerFWDevToolDlg::OnCbnSelchangeList)
+	ON_CBN_SELCHANGE(WRITE_BUF_PAGE_LIST, &CBurnerFWDevToolDlg::OnCbnSelchangeBufPageList)
 	ON_BN_CLICKED(SCAN_FLH_ID_BTN, &CBurnerFWDevToolDlg::OnBnClickedFlhIdBtn)
 	ON_BN_CLICKED(ERASE_BTN, &CBurnerFWDevToolDlg::OnBnClickedEraseBtn)
-	ON_BN_CLICKED(READ_PAGE_BTN, &CBurnerFWDevToolDlg::OnBnClickedPageBtn)
+	ON_BN_CLICKED(READ_PAGE_BTN, &CBurnerFWDevToolDlg::OnBnClickedReadPageBtn)
+	ON_BN_CLICKED(WRITE_BTN, &CBurnerFWDevToolDlg::OnBnClickedWriteBtn)
 END_MESSAGE_MAP()
 
 
@@ -71,12 +76,22 @@ BOOL CBurnerFWDevToolDlg::OnInitDialog()
 
 	// set buffer display limit
 	buf_result_edit_ctrl.SetLimitText(60000);
+	write_buf_edit_ctrl.SetLimitText(60000);
+
+	// set a Font with same width
+	m_font.CreateStockObject(ANSI_FIXED_FONT);
+	buf_result_edit_ctrl.SetFont(&m_font);
+	write_buf_edit_ctrl.SetFont(&m_font);
 
 	// set page list
 	page_list_ctrl.InsertString(0, _T("Lower page"));
 	page_list_ctrl.InsertString(1, _T("Middle page"));
 	page_list_ctrl.InsertString(2, _T("Upper page"));
 	SetDropDownHeight(&page_list_ctrl, 3);
+	write_buf_page_list_ctrl.InsertString(0, _T("Lower page"));
+	write_buf_page_list_ctrl.InsertString(1, _T("Middle page"));
+	write_buf_page_list_ctrl.InsertString(2, _T("Upper page"));
+	SetDropDownHeight(&write_buf_page_list_ctrl, 3);
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -139,6 +154,13 @@ void CBurnerFWDevToolDlg::insert_buffer_result_edit(CString msg)
 	buf_result_edit_ctrl.PostMessage(WM_VSCROLL, SB_BOTTOM, 0); // scroll location
 }
 
+void CBurnerFWDevToolDlg::insert_write_pattern_edit(CString msg)
+{
+	write_buf_edit_ctrl.SetSel(-1, -1);
+	write_buf_edit_ctrl.ReplaceSel(msg);
+	write_buf_edit_ctrl.PostMessage(WM_VSCROLL, SB_BOTTOM, 0); // scroll location
+}
+
 void CBurnerFWDevToolDlg::show_buffer_result(LPBYTE buf, UINT len, UINT show_col_n)
 {
 	buf_result_edit_ctrl.SetWindowText(_T(""));
@@ -160,6 +182,30 @@ void CBurnerFWDevToolDlg::show_buffer_result(LPBYTE buf, UINT len, UINT show_col
 	if (!str.IsEmpty()) {
 		str += _T("\n");
 		insert_buffer_result_edit(str);
+	}
+}
+
+void CBurnerFWDevToolDlg::show_write_pattern(LPBYTE buf, UINT len, UINT show_col_n)
+{
+	write_buf_edit_ctrl.SetWindowText(_T(""));
+	UINT cur_idx = 0;
+	CString str = _T(""), tmp;
+	while (cur_idx < len)
+	{
+		tmp.Format(_T("%02x "), buf[cur_idx]);
+		str += tmp;
+		cur_idx++;
+
+		if (!(cur_idx % show_col_n)) {
+			str += _T("\n");
+			insert_write_pattern_edit(str);
+			str = _T("");
+		}
+	}
+
+	if (!str.IsEmpty()) {
+		str += _T("\n");
+		insert_write_pattern_edit(str);
 	}
 }
 
@@ -207,6 +253,27 @@ void CBurnerFWDevToolDlg::OnCbnSelchangeList()
 
 	setup_btns(TRUE);
 	selected_device = device_list.at(selected_device_idx);
+}
+
+
+void CBurnerFWDevToolDlg::OnCbnSelchangeBufPageList()
+{
+	// empty write buf
+	write_buf_edit_ctrl.SetWindowText(_T(""));
+	// check if select
+	DWORD selected_wpage_idx = write_buf_page_list_ctrl.GetCurSel();
+	if (selected_wpage_idx == CB_ERR) {
+		return;
+	}
+
+	// get write buf parrtern
+	UINT len = 18336;
+	LPBYTE write_buf = new BYTE[len];
+	get_write_pattern(selected_wpage_idx + 1, write_buf, len);
+
+	show_write_pattern(write_buf, len);
+
+	delete[] write_buf;
 }
 
 
@@ -375,7 +442,7 @@ void CBurnerFWDevToolDlg::OnBnClickedEraseBtn()
 }
 
 
-void CBurnerFWDevToolDlg::OnBnClickedPageBtn()
+void CBurnerFWDevToolDlg::OnBnClickedReadPageBtn()
 {
 	// check value
 	CString tmp;
@@ -416,6 +483,10 @@ void CBurnerFWDevToolDlg::OnBnClickedPageBtn()
 	selected_wl = _ttoi(tmp);
 
 	selected_page = page_list_ctrl.GetCurSel();
+	if (selected_page == CB_ERR) {
+		MessageBox(_T("Must select page."), _T("Error"), MB_ICONERROR);
+		return;
+	}
 
 	if (selected_plane >= 2) {
 		MessageBox(_T("Only 2 plane per LUN."), _T("Error"), MB_ICONERROR);
@@ -467,7 +538,7 @@ void CBurnerFWDevToolDlg::OnBnClickedPageBtn()
 	}
 	insert_msg_edit(_T("\tRead page finished.\n"));
 
-	// show status buffer
+	// show read buffer
 	msg.Format(_T("\tShow read buffer (%d bytes).\n"), buf_len);
 	insert_msg_edit(msg);
 	show_buffer_result(read_buf, buf_len, 32);
@@ -479,3 +550,138 @@ void CBurnerFWDevToolDlg::OnBnClickedPageBtn()
 	MessageBox(msg, _T("Information"), MB_ICONINFORMATION);
 	CloseHandle(hDrive);
 }
+
+
+void CBurnerFWDevToolDlg::OnBnClickedWriteBtn()
+{
+	// check value
+	CString tmp;
+	DWORD selected_ce, selected_blk, selected_plane, selected_wl;
+	DWORD selected_device_idx = device_list_ctrl.GetCurSel();
+	if (selected_device_idx == CB_ERR) {
+		setup_btns(FALSE);
+		MessageBox(_T("Please select a device."), _T("Error"), MB_ICONERROR);
+		return;
+	}
+
+	ce_edit_ctrl.GetWindowText(tmp);
+	if (tmp.IsEmpty()) {
+		MessageBox(_T("Must input CE."), _T("Error"), MB_ICONERROR);
+		return;
+	}
+	selected_ce = _ttoi(tmp);
+
+	block_edit_ctrl.GetWindowText(tmp);
+	if (tmp.IsEmpty()) {
+		MessageBox(_T("Must input block."), _T("Error"), MB_ICONERROR);
+		return;
+	}
+	selected_blk = _ttoi(tmp);
+
+	plane_edit_ctrl.GetWindowText(tmp);
+	if (tmp.IsEmpty()) {
+		MessageBox(_T("Must input block."), _T("Error"), MB_ICONERROR);
+		return;
+	}
+	selected_plane = _ttoi(tmp);
+
+	wl_edit_ctrl.GetWindowText(tmp);
+	if (tmp.IsEmpty()) {
+		MessageBox(_T("Must input wordline."), _T("Error"), MB_ICONERROR);
+		return;
+	}
+	selected_wl = _ttoi(tmp);
+
+	if (selected_plane >= 2) {
+		MessageBox(_T("Only 2 plane per LUN."), _T("Error"), MB_ICONERROR);
+		return;
+	}
+	if (selected_blk > 989) {
+		MessageBox(_T("The block number is 990."), _T("Error"), MB_ICONERROR);
+		return;
+	}
+	if (selected_wl >= 384) {
+		MessageBox(_T("The block number is 384."), _T("Error"), MB_ICONERROR);
+		return;
+	}
+	selected_blk = selected_blk * 2 + selected_plane;
+
+	/*
+	 * write
+	 */
+	CString cur_op = _T("Write"), msg;
+	msg.Format(_T("Start %s.\n"), cur_op);
+	insert_msg_edit(msg);
+	HANDLE hDrive = selected_device.openDevice();
+
+	// issue AP key
+	if (!issue_AP_Key_Set(hDrive)) {
+		insert_msg_edit(_T("\tAP Key Set failed.\n"));
+		msg.Format(_T("End %s.\n"), cur_op);
+		insert_msg_edit(msg);
+		msg.Format(_T("%s failed.\n"), cur_op);
+		MessageBox(msg, _T("Error"), MB_ICONERROR);
+		CloseHandle(hDrive);
+		return;
+	}
+	insert_msg_edit(_T("\tAP Key Set finished.\n"));
+
+	// issue write
+	UINT page_len = 18336;
+	UINT data_buf_len = page_len * 3;
+	LPBYTE write_buf = new BYTE[data_buf_len];
+	get_write_pattern(LSB_PAGE, write_buf, page_len);
+	get_write_pattern(CSB_PAGE, write_buf + page_len, page_len);
+	get_write_pattern(MSB_PAGE, write_buf + page_len * 2, page_len);
+	if (!issue_Write(hDrive, selected_ce, selected_blk, selected_wl, write_buf, data_buf_len)) {
+		msg.Format(_T("\t%s failed.\n"), cur_op);
+		insert_msg_edit(msg);
+		msg.Format(_T("End %s.\n"), cur_op);
+		insert_msg_edit(msg);
+		msg.Format(_T("%s failed.\n"), cur_op);
+		MessageBox(msg, _T("Error"), MB_ICONERROR);
+		CloseHandle(hDrive);
+		return;
+	}
+	msg.Format(_T("\t%s finished.\n"), cur_op);
+	insert_msg_edit(msg);
+	delete[] write_buf;
+
+	// issue AP key
+	if (!issue_AP_Key_Set(hDrive)) {
+		insert_msg_edit(_T("\tAP Key Set failed.\n"));
+		msg.Format(_T("End %s.\n"), cur_op);
+		insert_msg_edit(msg);
+		msg.Format(_T("%s failed.\n"), cur_op);
+		MessageBox(msg, _T("Error"), MB_ICONERROR);
+		CloseHandle(hDrive);
+		return;
+	}
+	insert_msg_edit(_T("\tAP Key Set finished.\n"));
+
+	// issue read status
+	UINT status_buf_len = 32;
+	LPBYTE status_buf = new BYTE[status_buf_len];
+	if (!issue_Read_Status(hDrive, status_buf, status_buf_len)) {
+		insert_msg_edit(_T("\tRead status failed.\n"));
+		msg.Format(_T("End %s.\n"), cur_op);
+		insert_msg_edit(msg);
+		msg.Format(_T("%s failed.\n"), cur_op);
+		MessageBox(msg, _T("Error"), MB_ICONERROR);
+		CloseHandle(hDrive);
+		return;
+	}
+	insert_msg_edit(_T("\tShow 32byte status.\n"));
+
+	// show status buffer
+	show_buffer_result(status_buf, status_buf_len);
+	delete[] status_buf;
+
+	msg.Format(_T("End %s.\n"), cur_op);
+	insert_msg_edit(msg);
+	msg.Format(_T("%s succeed.\n"), cur_op);
+	MessageBox(msg, _T("Information"), MB_ICONINFORMATION);
+	CloseHandle(hDrive);
+}
+
+
