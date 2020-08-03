@@ -539,9 +539,19 @@ void CBurnerFWDevToolDlg::OnBnClickedReadPageBtn()
 	insert_msg_edit(_T("\tRead page finished.\n"));
 
 	// show read buffer
+	UINT err_byte, err_bit;
 	msg.Format(_T("\tShow read buffer (%d bytes).\n"), buf_len);
 	insert_msg_edit(msg);
 	show_buffer_result(read_buf, buf_len, 32);
+	if (diff_page_pattern(selected_page + 1, read_buf, &err_byte, &err_bit)) {
+		insert_msg_edit(_T("\tNo error byte.\n"));
+	}
+	else {
+		msg.Format(_T("\tError byte: %d.\n"), err_byte);
+		insert_msg_edit(msg);
+		msg.Format(_T("\tError bit: %d.\n"), err_bit);
+		insert_msg_edit(msg);
+	}
 	delete[] read_buf;
 
 	msg.Format(_T("End %s.\n"), cur_op);

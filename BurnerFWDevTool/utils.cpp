@@ -38,6 +38,38 @@ void get_write_pattern(UINT page_type, LPBYTE buf, UINT len)
 	}
 }
 
+DWORD count_bits(DWORD n)
+{
+	if (n == 0)
+		return 0;
+	else
+		return (n & 1) + count_bits(n >> 1);
+}
+
+BOOL diff_page_pattern(UINT page_type, LPBYTE read_buf, UINT* err_byte, UINT* err_bit)
+{
+	UINT page_len = 18336;
+	UINT byte_cnt = 0, bit_cnt = 0;
+	BOOL rtn = TRUE;
+	LPBYTE pattern = new BYTE[page_len];
+	get_write_pattern(page_type, pattern, page_len);
+
+	for (UINT i = 0; i < page_len; i++) {
+		BYTE diff = pattern[i] ^ read_buf[i];
+		if (diff != 0) {
+			byte_cnt++;
+			bit_cnt += count_bits(diff);
+			rtn = FALSE;
+		}
+	}
+
+	*err_byte = byte_cnt;
+	*err_bit = bit_cnt;
+	delete[] pattern;
+
+	return rtn;
+}
+
 int scan_physical_drive(vector<Device>& device_list, int limit_cnt)
 {
 	int device_cnt = 0;
