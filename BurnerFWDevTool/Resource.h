@@ -8,6 +8,8 @@
 #define PAGE_LIST                       1002
 #define SCAN_FLH_ID_BTN                 1003
 #define WRITE_BUF_PAGE_LIST             1004
+#define DEVICE_LIST2                    1005
+#define MODE_LIST                       1005
 #define MSG_EDIT                        1008
 #define BUF_RESULT_EDIT                 1009
 #define CE_EDIT                         1010
@@ -16,7 +18,6 @@
 #define PLANE_EDIT                      1013
 #define READ_PAGE_BTN                   1014
 #define WL_EDIT                         1015
-#define READ_PAGE_BTN2                  1016
 #define WRITE_BTN                       1016
 #define WRITE_BUF_EDIT                  1017
 

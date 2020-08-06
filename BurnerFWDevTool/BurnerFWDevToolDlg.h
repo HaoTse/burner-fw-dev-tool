@@ -57,6 +57,7 @@ public:
 	CEdit write_buf_edit_ctrl;
 	CComboBox page_list_ctrl;
 	CComboBox write_buf_page_list_ctrl;
+	CComboBox mode_list_ctrl;
 	CButton erase_btn_ctrl;
 	CButton read_page_btn_ctrl;
 	CButton write_btn_ctrl;

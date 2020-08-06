@@ -45,6 +45,7 @@ void CBurnerFWDevToolDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, WRITE_BUF_PAGE_LIST, write_buf_page_list_ctrl);
 	DDX_Control(pDX, WRITE_BUF_EDIT, write_buf_edit_ctrl);
 	DDX_Control(pDX, WRITE_BTN, write_btn_ctrl);
+	DDX_Control(pDX, MODE_LIST, mode_list_ctrl);
 }
 
 BEGIN_MESSAGE_MAP(CBurnerFWDevToolDlg, CDialogEx)
@@ -92,6 +93,11 @@ BOOL CBurnerFWDevToolDlg::OnInitDialog()
 	write_buf_page_list_ctrl.InsertString(1, _T("Middle page"));
 	write_buf_page_list_ctrl.InsertString(2, _T("Upper page"));
 	SetDropDownHeight(&write_buf_page_list_ctrl, 3);
+
+	// set mode list
+	mode_list_ctrl.InsertString(0, _T("PIO"));
+	mode_list_ctrl.InsertString(1, _T("FPU"));
+	SetDropDownHeight(&mode_list_ctrl, 2);
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -258,6 +264,13 @@ void CBurnerFWDevToolDlg::OnCbnSelchangeList()
 
 void CBurnerFWDevToolDlg::OnCbnSelchangeBufPageList()
 {
+	DWORD selected_mode = mode_list_ctrl.GetCurSel();
+	if (selected_mode == CB_ERR) {
+		setup_btns(FALSE);
+		MessageBox(_T("Please select mode."), _T("Error"), MB_ICONERROR);
+		return;
+	}
+
 	// empty write buf
 	write_buf_edit_ctrl.SetWindowText(_T(""));
 	// check if select
@@ -267,7 +280,7 @@ void CBurnerFWDevToolDlg::OnCbnSelchangeBufPageList()
 	}
 
 	// get write buf parrtern
-	UINT len = 18336;
+	UINT len = (selected_mode == 0) ? 18336 : 16384;
 	LPBYTE write_buf = new BYTE[len];
 	get_write_pattern(selected_wpage_idx + 1, write_buf, len);
 
@@ -331,11 +344,19 @@ void CBurnerFWDevToolDlg::OnBnClickedEraseBtn()
 {
 	// check value
 	CString tmp;
-	DWORD selected_ce, selected_blk, selected_plane;
+	DWORD selected_ce, selected_blk, selected_plane, selected_mode;
+
 	DWORD selected_device_idx = device_list_ctrl.GetCurSel();
 	if (selected_device_idx == CB_ERR) {
 		setup_btns(FALSE);
 		MessageBox(_T("Please select a device."), _T("Error"), MB_ICONERROR);
+		return;
+	}
+	
+	selected_mode = mode_list_ctrl.GetCurSel();
+	if (selected_mode == CB_ERR) {
+		setup_btns(FALSE);
+		MessageBox(_T("Please select mode."), _T("Error"), MB_ICONERROR);
 		return;
 	}
 
@@ -355,7 +376,7 @@ void CBurnerFWDevToolDlg::OnBnClickedEraseBtn()
 
 	plane_edit_ctrl.GetWindowText(tmp);
 	if (tmp.IsEmpty()) {
-		MessageBox(_T("Must input block."), _T("Error"), MB_ICONERROR);
+		MessageBox(_T("Must input plane."), _T("Error"), MB_ICONERROR);
 		return;
 	}
 	selected_plane = _ttoi(tmp);
@@ -391,7 +412,7 @@ void CBurnerFWDevToolDlg::OnBnClickedEraseBtn()
 	insert_msg_edit(_T("\tAP Key Set finished.\n"));
 
 	// issue erase
-	if (!issue_Erase(hDrive, selected_ce, selected_blk)) {
+	if (!issue_Erase(hDrive, selected_mode, selected_ce, selected_blk)) {
 		msg.Format(_T("\t%s failed.\n"), cur_op);
 		insert_msg_edit(msg);
 		msg.Format(_T("End %s.\n"), cur_op);
@@ -446,11 +467,19 @@ void CBurnerFWDevToolDlg::OnBnClickedReadPageBtn()
 {
 	// check value
 	CString tmp;
-	DWORD selected_ce, selected_blk, selected_plane, selected_wl, selected_page;
+	DWORD selected_ce, selected_blk, selected_plane, selected_wl, selected_page, selected_mode;
+
 	DWORD selected_device_idx = device_list_ctrl.GetCurSel();
 	if (selected_device_idx == CB_ERR) {
 		setup_btns(FALSE);
 		MessageBox(_T("Please select a device."), _T("Error"), MB_ICONERROR);
+		return;
+	}
+
+	selected_mode = mode_list_ctrl.GetCurSel();
+	if (selected_mode == CB_ERR) {
+		setup_btns(FALSE);
+		MessageBox(_T("Please select mode."), _T("Error"), MB_ICONERROR);
 		return;
 	}
 
@@ -470,7 +499,7 @@ void CBurnerFWDevToolDlg::OnBnClickedReadPageBtn()
 
 	plane_edit_ctrl.GetWindowText(tmp);
 	if (tmp.IsEmpty()) {
-		MessageBox(_T("Must input block."), _T("Error"), MB_ICONERROR);
+		MessageBox(_T("Must input plane."), _T("Error"), MB_ICONERROR);
 		return;
 	}
 	selected_plane = _ttoi(tmp);
@@ -497,11 +526,11 @@ void CBurnerFWDevToolDlg::OnBnClickedReadPageBtn()
 		return;
 	}
 	if (selected_wl >= 384) {
-		MessageBox(_T("The block number is 384."), _T("Error"), MB_ICONERROR);
+		MessageBox(_T("The wl number is 384."), _T("Error"), MB_ICONERROR);
 		return;
 	}
 	selected_blk = selected_blk * 2 + selected_plane;
-	selected_wl = (selected_wl << 2) + (selected_page + 1);
+	selected_wl = (selected_wl << 2) + (selected_page);
 
 	/*
 	 * read page
@@ -524,9 +553,15 @@ void CBurnerFWDevToolDlg::OnBnClickedReadPageBtn()
 	insert_msg_edit(_T("\tAP Key Set finished.\n"));
 
 	// issue read page
-	UINT buf_len = 18336;
+	UINT buf_len;
+	if (selected_mode == 0) { // PIO mode
+		buf_len = 18336;
+	}
+	else {
+		buf_len = 16384;
+	}
 	LPBYTE read_buf = new BYTE[buf_len];
-	if (!issue_Read_Page(hDrive, selected_ce, selected_blk, selected_wl, read_buf, buf_len)) {
+	if (!issue_Read_Page(hDrive, selected_mode, selected_ce, selected_blk, selected_wl, read_buf, buf_len)) {
 		msg.Format(_T("\t%s failed.\n"), cur_op);
 		insert_msg_edit(msg);
 		msg.Format(_T("End %s.\n"), cur_op);
@@ -534,6 +569,7 @@ void CBurnerFWDevToolDlg::OnBnClickedReadPageBtn()
 		msg.Format(_T("%s failed.\n"), cur_op);
 		MessageBox(msg, _T("Error"), MB_ICONERROR);
 		CloseHandle(hDrive);
+		delete[] read_buf;
 		return;
 	}
 	insert_msg_edit(_T("\tRead page finished.\n"));
@@ -543,7 +579,7 @@ void CBurnerFWDevToolDlg::OnBnClickedReadPageBtn()
 	msg.Format(_T("\tShow read buffer (%d bytes).\n"), buf_len);
 	insert_msg_edit(msg);
 	show_buffer_result(read_buf, buf_len, 32);
-	if (diff_page_pattern(selected_page + 1, read_buf, &err_byte, &err_bit)) {
+	if (diff_page_pattern(selected_page + 1, read_buf, buf_len, &err_byte, &err_bit)) {
 		insert_msg_edit(_T("\tNo error byte.\n"));
 	}
 	else {
@@ -566,11 +602,19 @@ void CBurnerFWDevToolDlg::OnBnClickedWriteBtn()
 {
 	// check value
 	CString tmp;
-	DWORD selected_ce, selected_blk, selected_plane, selected_wl;
+	DWORD selected_ce, selected_blk, selected_plane, selected_wl, selected_mode;
+
 	DWORD selected_device_idx = device_list_ctrl.GetCurSel();
 	if (selected_device_idx == CB_ERR) {
 		setup_btns(FALSE);
 		MessageBox(_T("Please select a device."), _T("Error"), MB_ICONERROR);
+		return;
+	}
+
+	selected_mode = mode_list_ctrl.GetCurSel();
+	if (selected_mode == CB_ERR) {
+		setup_btns(FALSE);
+		MessageBox(_T("Please select mode."), _T("Error"), MB_ICONERROR);
 		return;
 	}
 
@@ -590,7 +634,7 @@ void CBurnerFWDevToolDlg::OnBnClickedWriteBtn()
 
 	plane_edit_ctrl.GetWindowText(tmp);
 	if (tmp.IsEmpty()) {
-		MessageBox(_T("Must input block."), _T("Error"), MB_ICONERROR);
+		MessageBox(_T("Must input plane."), _T("Error"), MB_ICONERROR);
 		return;
 	}
 	selected_plane = _ttoi(tmp);
@@ -611,7 +655,7 @@ void CBurnerFWDevToolDlg::OnBnClickedWriteBtn()
 		return;
 	}
 	if (selected_wl >= 384) {
-		MessageBox(_T("The block number is 384."), _T("Error"), MB_ICONERROR);
+		MessageBox(_T("The wl number is 384."), _T("Error"), MB_ICONERROR);
 		return;
 	}
 	selected_blk = selected_blk * 2 + selected_plane;
@@ -637,13 +681,19 @@ void CBurnerFWDevToolDlg::OnBnClickedWriteBtn()
 	insert_msg_edit(_T("\tAP Key Set finished.\n"));
 
 	// issue write
-	UINT page_len = 18336;
+	UINT page_len;
+	if (selected_mode == 0) { // PIO mode
+		page_len = 18336;
+	}
+	else {
+		page_len = 16384;
+	}
 	UINT data_buf_len = page_len * 3;
 	LPBYTE write_buf = new BYTE[data_buf_len];
 	get_write_pattern(LSB_PAGE, write_buf, page_len);
 	get_write_pattern(CSB_PAGE, write_buf + page_len, page_len);
 	get_write_pattern(MSB_PAGE, write_buf + page_len * 2, page_len);
-	if (!issue_Write(hDrive, selected_ce, selected_blk, selected_wl, write_buf, data_buf_len)) {
+	if (!issue_Write(hDrive, selected_mode, selected_ce, selected_blk, selected_wl, write_buf, data_buf_len)) {
 		msg.Format(_T("\t%s failed.\n"), cur_op);
 		insert_msg_edit(msg);
 		msg.Format(_T("End %s.\n"), cur_op);

@@ -23,18 +23,18 @@ void get_write_pattern(UINT page_type, LPBYTE buf, UINT len)
 		}
 	}
 	else {
-		//for (UINT i = 0; i < len; i++) {
-		//	buf[i] = 0x55;
-		//	/*if (i < (len >> 1)) buf[i] = 0xff;
-		//	else buf[i] = 0x00;*/
-		//}
-		for (UINT i = 0; i < (len >> 1); i++) {
+		for (UINT i = 0; i < len; i++) {
+			//buf[i] = 0x55;
+			if (i < (len >> 1)) buf[i] = 0xff;
+			else buf[i] = 0x00;
+		}
+		/*for (UINT i = 0; i < (len >> 1); i++) {
 			buf[i << 1] = (BYTE)((0xFF - i) & 0xFF);
 			buf[(i << 1) + 1] = (BYTE)(((0xFF - i) >> 8) & 0xFF);
 		}
 		if (len & 1) {
 			buf[len - 1] = (BYTE)((len >> 1) & 0xFF);
-		}
+		}*/
 	}
 }
 
@@ -46,9 +46,8 @@ DWORD count_bits(DWORD n)
 		return (n & 1) + count_bits(n >> 1);
 }
 
-BOOL diff_page_pattern(UINT page_type, LPBYTE read_buf, UINT* err_byte, UINT* err_bit)
+BOOL diff_page_pattern(UINT page_type, LPBYTE read_buf, UINT page_len, UINT* err_byte, UINT* err_bit)
 {
-	UINT page_len = 18336;
 	UINT byte_cnt = 0, bit_cnt = 0;
 	BOOL rtn = TRUE;
 	LPBYTE pattern = new BYTE[page_len];
