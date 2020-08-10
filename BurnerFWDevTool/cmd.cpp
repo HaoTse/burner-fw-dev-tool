@@ -205,7 +205,7 @@ BOOL issue_Read_Page(HANDLE hDrive, UINT mode, UINT ce, UINT blk, UINT page, LPB
 	transf_buf[0x32] = (byte)((read_len_dw >> 16) & 0xff);
 	transf_buf[0x33] = (byte)((read_len_dw >> 24) & 0xff);
 	transf_buf[0x38] = 0xe4; // CDW12 - feature
-	transf_buf[0x39] = mode + 1; // set sub-feature
+	transf_buf[0x39] = mode; // set sub-feature
 	transf_buf[0x3E] = (byte)(page & 0xff); // CDW13[2:3] - page
 	transf_buf[0x3F] = (byte)((page >> 8) & 0xff);
 	transf_buf[0x40] = (byte)(blk & 0xff); // CDW14[1:0] - block
@@ -259,7 +259,7 @@ BOOL issue_Write(HANDLE hDrive, UINT mode, UINT ce, UINT blk, UINT page, LPBYTE 
 	transf_buf[0x32] = (byte)((write_len_dw >> 16) & 0xff);
 	transf_buf[0x33] = (byte)((write_len_dw >> 24) & 0xff);
 	transf_buf[0x38] = 0xe5; // CDW12 - feature
-	transf_buf[0x39] = mode + 1; // set sub-feature
+	transf_buf[0x39] = mode; // set sub-feature
 	transf_buf[0x3E] = (byte)(page & 0xff); // CDW13[2:3] - page
 	transf_buf[0x3F] = (byte)((page >> 8) & 0xff);
 	transf_buf[0x40] = (byte)(blk & 0xff); // CDW14[1:0] - block

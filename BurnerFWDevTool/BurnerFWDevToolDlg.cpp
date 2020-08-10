@@ -46,6 +46,8 @@ void CBurnerFWDevToolDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, WRITE_BUF_EDIT, write_buf_edit_ctrl);
 	DDX_Control(pDX, WRITE_BTN, write_btn_ctrl);
 	DDX_Control(pDX, MODE_LIST, mode_list_ctrl);
+	//  DDX_Control(pDX, TYPE_RADIO_GROUP, type_radio_ctrl);
+	//  DDX_Text(pDX, TYPE_RADIO_GROUP, page_type_value);
 }
 
 BEGIN_MESSAGE_MAP(CBurnerFWDevToolDlg, CDialogEx)
@@ -99,6 +101,10 @@ BOOL CBurnerFWDevToolDlg::OnInitDialog()
 	mode_list_ctrl.InsertString(1, _T("FPU"));
 	mode_list_ctrl.InsertString(2, _T("MT"));
 	SetDropDownHeight(&mode_list_ctrl, 3);
+
+	// set default page type
+	CButton* page_type_tlc = (CButton*)GetDlgItem(TYPE_TLC_RADIO);
+	page_type_tlc->SetCheck(1);
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -471,7 +477,7 @@ void CBurnerFWDevToolDlg::OnBnClickedReadPageBtn()
 {
 	// check value
 	CString tmp;
-	DWORD selected_ce, selected_blk, selected_plane, selected_wl, selected_page, selected_mode;
+	DWORD selected_ce, selected_blk, selected_plane, selected_wl, selected_page, selected_mode, slc_mode;
 
 	DWORD selected_device_idx = device_list_ctrl.GetCurSel();
 	if (selected_device_idx == CB_ERR) {
@@ -534,7 +540,22 @@ void CBurnerFWDevToolDlg::OnBnClickedReadPageBtn()
 		return;
 	}
 	selected_blk = selected_blk * 2 + selected_plane;
-	selected_wl = (selected_wl << 2) + (selected_page);
+
+	UpdateData(TRUE);
+	slc_mode = (GetCheckedRadioButton(TYPE_TLC_RADIO, TYPE_SLC_RADIO) == TYPE_TLC_RADIO) ? 0 : 1;
+	if (selected_mode == 2) {
+		selected_mode += slc_mode;
+	}
+
+	if (selected_mode == 0) {
+		selected_wl = (selected_wl << 2) + (selected_page);
+	}
+	else if (slc_mode == 0 || selected_mode == 1) {
+		selected_wl = (selected_wl * 3) + (selected_page);
+	}
+	else {
+		selected_page = 0;
+	}
 
 	/*
 	 * read page
@@ -606,7 +627,7 @@ void CBurnerFWDevToolDlg::OnBnClickedWriteBtn()
 {
 	// check value
 	CString tmp;
-	DWORD selected_ce, selected_blk, selected_plane, selected_wl, selected_mode;
+	DWORD selected_ce, selected_blk, selected_plane, selected_wl, selected_mode, slc_mode;
 
 	DWORD selected_device_idx = device_list_ctrl.GetCurSel();
 	if (selected_device_idx == CB_ERR) {
@@ -664,6 +685,15 @@ void CBurnerFWDevToolDlg::OnBnClickedWriteBtn()
 	}
 	selected_blk = selected_blk * 2 + selected_plane;
 
+	UpdateData(TRUE);
+	slc_mode = (GetCheckedRadioButton(TYPE_TLC_RADIO, TYPE_SLC_RADIO) == TYPE_TLC_RADIO) ? 0 : 1;
+	if (selected_mode == 2) {
+		selected_mode += slc_mode;
+	}
+	else {
+		slc_mode = 0;
+	}
+
 	/*
 	 * write
 	 */
@@ -692,11 +722,13 @@ void CBurnerFWDevToolDlg::OnBnClickedWriteBtn()
 	else {
 		page_len = 16384;
 	}
-	UINT data_buf_len = page_len * 3;
+	UINT data_buf_len = (slc_mode) ? page_len : page_len * 3;
 	LPBYTE write_buf = new BYTE[data_buf_len];
 	get_write_pattern(LSB_PAGE, write_buf, page_len);
-	get_write_pattern(CSB_PAGE, write_buf + page_len, page_len);
-	get_write_pattern(MSB_PAGE, write_buf + page_len * 2, page_len);
+	if (slc_mode == 0) {
+		get_write_pattern(CSB_PAGE, write_buf + page_len, page_len);
+		get_write_pattern(MSB_PAGE, write_buf + page_len * 2, page_len);
+	}
 	if (!issue_Write(hDrive, selected_mode, selected_ce, selected_blk, selected_wl, write_buf, data_buf_len)) {
 		msg.Format(_T("\t%s failed.\n"), cur_op);
 		insert_msg_edit(msg);

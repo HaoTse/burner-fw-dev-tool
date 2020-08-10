@@ -8,7 +8,6 @@
 #define PAGE_LIST                       1002
 #define SCAN_FLH_ID_BTN                 1003
 #define WRITE_BUF_PAGE_LIST             1004
-#define DEVICE_LIST2                    1005
 #define MODE_LIST                       1005
 #define MSG_EDIT                        1008
 #define BUF_RESULT_EDIT                 1009
@@ -20,6 +19,11 @@
 #define WL_EDIT                         1015
 #define WRITE_BTN                       1016
 #define WRITE_BUF_EDIT                  1017
+#define TPYE_TLC_RADIO                  1018
+#define TYPE_TLC_RADIO                  1018
+#define IDC_RADIO2                      1019
+#define TYPE_SLC_RADIO                  1019
+#define TYPE_RADIO_GROUP                1020
 
 // Next default values for new objects
 // 
@@ -27,7 +31,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        130
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1015
+#define _APS_NEXT_CONTROL_VALUE         1021
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

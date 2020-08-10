@@ -61,6 +61,8 @@ public:
 	CButton erase_btn_ctrl;
 	CButton read_page_btn_ctrl;
 	CButton write_btn_ctrl;
+//	CStatic type_radio_ctrl;
+//	int page_type_value;
 	afx_msg void OnCbnDropdownList();
 	afx_msg void OnCbnSelchangeList();
 	afx_msg void OnCbnSelchangeBufPageList();
