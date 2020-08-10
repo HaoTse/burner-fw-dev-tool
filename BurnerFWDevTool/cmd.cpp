@@ -153,7 +153,7 @@ BOOL issue_Erase(HANDLE hDrive, UINT mode, UINT ce, UINT blk)
 	transf_buf[3] = (byte)'E';
 	transf_buf[8] = 0xd0; // non-data opcode
 	transf_buf[0x38] = 0xe9; // CDW12 - feature
-	transf_buf[0x39] = mode + 1; // set sub-feature
+	transf_buf[0x39] = mode; // set sub-feature
 	transf_buf[0x40] = (byte)(blk & 0xff); // CDW14[1:0] - block
 	transf_buf[0x41] = (byte)((blk >> 8) & 0xff);
 	transf_buf[0x43] = (byte)(ce & 0xff); // CDW14[3] - ce

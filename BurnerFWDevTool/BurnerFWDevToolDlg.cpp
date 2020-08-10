@@ -351,7 +351,7 @@ void CBurnerFWDevToolDlg::OnBnClickedEraseBtn()
 {
 	// check value
 	CString tmp;
-	DWORD selected_ce, selected_blk, selected_plane, selected_mode;
+	DWORD selected_ce, selected_blk, selected_plane, selected_mode, slc_mode;
 
 	DWORD selected_device_idx = device_list_ctrl.GetCurSel();
 	if (selected_device_idx == CB_ERR) {
@@ -397,6 +397,12 @@ void CBurnerFWDevToolDlg::OnBnClickedEraseBtn()
 		return;
 	}
 	selected_blk = selected_blk * 2 + selected_plane;
+
+	UpdateData(TRUE);
+	slc_mode = (GetCheckedRadioButton(TYPE_TLC_RADIO, TYPE_SLC_RADIO) == TYPE_TLC_RADIO) ? 0 : 1;
+	if (selected_mode == 2) {
+		selected_mode += slc_mode;
+	}
 
 	/*
 	 * erase
