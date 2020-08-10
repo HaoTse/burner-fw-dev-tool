@@ -97,7 +97,8 @@ BOOL CBurnerFWDevToolDlg::OnInitDialog()
 	// set mode list
 	mode_list_ctrl.InsertString(0, _T("PIO"));
 	mode_list_ctrl.InsertString(1, _T("FPU"));
-	SetDropDownHeight(&mode_list_ctrl, 2);
+	mode_list_ctrl.InsertString(2, _T("MT"));
+	SetDropDownHeight(&mode_list_ctrl, 3);
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -425,35 +426,38 @@ void CBurnerFWDevToolDlg::OnBnClickedEraseBtn()
 	msg.Format(_T("\t%s finished.\n"), cur_op);
 	insert_msg_edit(msg);
 
-	// issue AP key
-	if (!issue_AP_Key_Set(hDrive)) {
-		insert_msg_edit(_T("\tAP Key Set failed.\n"));
-		msg.Format(_T("End %s.\n"), cur_op);
-		insert_msg_edit(msg);
-		msg.Format(_T("%s failed.\n"), cur_op);
-		MessageBox(msg, _T("Error"), MB_ICONERROR);
-		CloseHandle(hDrive);
-		return;
-	}
-	insert_msg_edit(_T("\tAP Key Set finished.\n"));
+	buf_result_edit_ctrl.SetWindowText(_T(""));
+	if (selected_mode == 0 || selected_mode == 1) { // only store status in PIO and FPU mode
+		// issue AP key
+		if (!issue_AP_Key_Set(hDrive)) {
+			insert_msg_edit(_T("\tAP Key Set failed.\n"));
+			msg.Format(_T("End %s.\n"), cur_op);
+			insert_msg_edit(msg);
+			msg.Format(_T("%s failed.\n"), cur_op);
+			MessageBox(msg, _T("Error"), MB_ICONERROR);
+			CloseHandle(hDrive);
+			return;
+		}
+		insert_msg_edit(_T("\tAP Key Set finished.\n"));
 
-	// issue read status
-	UINT buf_len = 32;
-	LPBYTE status_buf = new BYTE[buf_len];
-	if (!issue_Read_Status(hDrive, status_buf, buf_len)) {
-		insert_msg_edit(_T("\tRead status failed.\n"));
-		msg.Format(_T("End %s.\n"), cur_op);
-		insert_msg_edit(msg);
-		msg.Format(_T("%s failed.\n"), cur_op);
-		MessageBox(msg, _T("Error"), MB_ICONERROR);
-		CloseHandle(hDrive);
-		return;
-	}
-	insert_msg_edit(_T("\tShow 32byte status.\n"));
+		// issue read status
+		UINT buf_len = 32;
+		LPBYTE status_buf = new BYTE[buf_len];
+		if (!issue_Read_Status(hDrive, status_buf, buf_len)) {
+			insert_msg_edit(_T("\tRead status failed.\n"));
+			msg.Format(_T("End %s.\n"), cur_op);
+			insert_msg_edit(msg);
+			msg.Format(_T("%s failed.\n"), cur_op);
+			MessageBox(msg, _T("Error"), MB_ICONERROR);
+			CloseHandle(hDrive);
+			return;
+		}
+		insert_msg_edit(_T("\tShow 32byte status.\n"));
 
-	// show status buffer
-	show_buffer_result(status_buf, buf_len);
-	delete[] status_buf;
+		// show status buffer
+		show_buffer_result(status_buf, buf_len);
+		delete[] status_buf;
+	}
 
 	msg.Format(_T("End %s.\n"), cur_op);
 	insert_msg_edit(msg);
@@ -707,35 +711,38 @@ void CBurnerFWDevToolDlg::OnBnClickedWriteBtn()
 	insert_msg_edit(msg);
 	delete[] write_buf;
 
-	// issue AP key
-	if (!issue_AP_Key_Set(hDrive)) {
-		insert_msg_edit(_T("\tAP Key Set failed.\n"));
-		msg.Format(_T("End %s.\n"), cur_op);
-		insert_msg_edit(msg);
-		msg.Format(_T("%s failed.\n"), cur_op);
-		MessageBox(msg, _T("Error"), MB_ICONERROR);
-		CloseHandle(hDrive);
-		return;
-	}
-	insert_msg_edit(_T("\tAP Key Set finished.\n"));
+	buf_result_edit_ctrl.SetWindowText(_T(""));
+	if (selected_mode == 0 || selected_mode == 1) { // only store status in PIO and FPU mode
+		// issue AP key
+		if (!issue_AP_Key_Set(hDrive)) {
+			insert_msg_edit(_T("\tAP Key Set failed.\n"));
+			msg.Format(_T("End %s.\n"), cur_op);
+			insert_msg_edit(msg);
+			msg.Format(_T("%s failed.\n"), cur_op);
+			MessageBox(msg, _T("Error"), MB_ICONERROR);
+			CloseHandle(hDrive);
+			return;
+		}
+		insert_msg_edit(_T("\tAP Key Set finished.\n"));
 
-	// issue read status
-	UINT status_buf_len = 32;
-	LPBYTE status_buf = new BYTE[status_buf_len];
-	if (!issue_Read_Status(hDrive, status_buf, status_buf_len)) {
-		insert_msg_edit(_T("\tRead status failed.\n"));
-		msg.Format(_T("End %s.\n"), cur_op);
-		insert_msg_edit(msg);
-		msg.Format(_T("%s failed.\n"), cur_op);
-		MessageBox(msg, _T("Error"), MB_ICONERROR);
-		CloseHandle(hDrive);
-		return;
-	}
-	insert_msg_edit(_T("\tShow 32byte status.\n"));
+		// issue read status
+		UINT status_buf_len = 32;
+		LPBYTE status_buf = new BYTE[status_buf_len];
+		if (!issue_Read_Status(hDrive, status_buf, status_buf_len)) {
+			insert_msg_edit(_T("\tRead status failed.\n"));
+			msg.Format(_T("End %s.\n"), cur_op);
+			insert_msg_edit(msg);
+			msg.Format(_T("%s failed.\n"), cur_op);
+			MessageBox(msg, _T("Error"), MB_ICONERROR);
+			CloseHandle(hDrive);
+			return;
+		}
+		insert_msg_edit(_T("\tShow 32byte status.\n"));
 
-	// show status buffer
-	show_buffer_result(status_buf, status_buf_len);
-	delete[] status_buf;
+		// show status buffer
+		show_buffer_result(status_buf, status_buf_len);
+		delete[] status_buf;
+	}
 
 	msg.Format(_T("End %s.\n"), cur_op);
 	insert_msg_edit(msg);
