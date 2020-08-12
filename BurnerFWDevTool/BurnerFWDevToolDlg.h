@@ -42,7 +42,7 @@ private:
 	void insert_msg_edit(CString msg);
 	void insert_buffer_result_edit(CString msg);
 	void insert_write_pattern_edit(CString msg);
-	void show_buffer_result(LPBYTE buf, UINT len, UINT show_col_n = 16);
+	void show_buffer_result(LPBYTE buf, UINT len, UINT show_col_n = 16, BOOL reset = TRUE);
 	void show_write_pattern(LPBYTE buf, UINT len, UINT show_col_n = 32);
 public:
 	CFont m_font;
@@ -61,8 +61,6 @@ public:
 	CButton erase_btn_ctrl;
 	CButton read_page_btn_ctrl;
 	CButton write_btn_ctrl;
-//	CStatic type_radio_ctrl;
-//	int page_type_value;
 	afx_msg void OnCbnDropdownList();
 	afx_msg void OnCbnSelchangeList();
 	afx_msg void OnCbnSelchangeBufPageList();

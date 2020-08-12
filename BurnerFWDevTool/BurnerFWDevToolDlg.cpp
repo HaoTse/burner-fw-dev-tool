@@ -78,8 +78,8 @@ BOOL CBurnerFWDevToolDlg::OnInitDialog()
 	setup_btns(FALSE);
 
 	// set buffer display limit
-	buf_result_edit_ctrl.SetLimitText(60000);
-	write_buf_edit_ctrl.SetLimitText(60000);
+	buf_result_edit_ctrl.SetLimitText(120000);
+	write_buf_edit_ctrl.SetLimitText(120000);
 
 	// set a Font with same width
 	m_font.CreateStockObject(ANSI_FIXED_FONT);
@@ -105,6 +105,10 @@ BOOL CBurnerFWDevToolDlg::OnInitDialog()
 	// set default page type
 	CButton* page_type_tlc = (CButton*)GetDlgItem(TYPE_TLC_RADIO);
 	page_type_tlc->SetCheck(1);
+
+	// set default multi-plane radio
+	CButton* mp_wo_radio = (CButton*)GetDlgItem(MP_WO_RADIO);
+	mp_wo_radio->SetCheck(1);
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -150,6 +154,7 @@ void CBurnerFWDevToolDlg::setup_btns(BOOL setup)
 	scan_flh_id_btn_ctrl.EnableWindow(setup);
 	erase_btn_ctrl.EnableWindow(setup);
 	read_page_btn_ctrl.EnableWindow(setup);
+	write_btn_ctrl.EnableWindow(setup);
 }
 
 
@@ -174,9 +179,9 @@ void CBurnerFWDevToolDlg::insert_write_pattern_edit(CString msg)
 	write_buf_edit_ctrl.PostMessage(WM_VSCROLL, SB_BOTTOM, 0); // scroll location
 }
 
-void CBurnerFWDevToolDlg::show_buffer_result(LPBYTE buf, UINT len, UINT show_col_n)
+void CBurnerFWDevToolDlg::show_buffer_result(LPBYTE buf, UINT len, UINT show_col_n, BOOL reset)
 {
-	buf_result_edit_ctrl.SetWindowText(_T(""));
+	if(reset) buf_result_edit_ctrl.SetWindowText(_T(""));
 	UINT cur_idx = 0;
 	CString str = _T(""), tmp;
 	while (cur_idx < len)
@@ -351,7 +356,8 @@ void CBurnerFWDevToolDlg::OnBnClickedEraseBtn()
 {
 	// check value
 	CString tmp;
-	DWORD selected_ce, selected_blk, selected_plane, selected_mode, slc_mode;
+	DWORD selected_ce, selected_blk, selected_plane, selected_mode;
+	DWORD slc_mode, mp_radio;
 
 	DWORD selected_device_idx = device_list_ctrl.GetCurSel();
 	if (selected_device_idx == CB_ERR) {
@@ -366,6 +372,10 @@ void CBurnerFWDevToolDlg::OnBnClickedEraseBtn()
 		MessageBox(_T("Please select mode."), _T("Error"), MB_ICONERROR);
 		return;
 	}
+
+	UpdateData(TRUE);
+	slc_mode = (GetCheckedRadioButton(TYPE_TLC_RADIO, TYPE_SLC_RADIO) == TYPE_TLC_RADIO) ? 0 : 1;
+	mp_radio = (GetCheckedRadioButton(MP_WO_RADIO, MP_W_RADIO) == MP_WO_RADIO) ? 0 : 1;
 
 	ce_edit_ctrl.GetWindowText(tmp);
 	if (tmp.IsEmpty()) {
@@ -382,13 +392,13 @@ void CBurnerFWDevToolDlg::OnBnClickedEraseBtn()
 	selected_blk = _ttoi(tmp);
 
 	plane_edit_ctrl.GetWindowText(tmp);
-	if (tmp.IsEmpty()) {
+	if (tmp.IsEmpty() && mp_radio == 0) {
 		MessageBox(_T("Must input plane."), _T("Error"), MB_ICONERROR);
 		return;
 	}
 	selected_plane = _ttoi(tmp);
 
-	if (selected_plane >= 2) {
+	if (selected_plane >= 2 && mp_radio == 0) {
 		MessageBox(_T("Only 2 plane per LUN."), _T("Error"), MB_ICONERROR);
 		return;
 	}
@@ -396,12 +406,19 @@ void CBurnerFWDevToolDlg::OnBnClickedEraseBtn()
 		MessageBox(_T("The block number is 989."), _T("Error"), MB_ICONERROR);
 		return;
 	}
-	selected_blk = selected_blk * 2 + selected_plane;
 
-	UpdateData(TRUE);
-	slc_mode = (GetCheckedRadioButton(TYPE_TLC_RADIO, TYPE_SLC_RADIO) == TYPE_TLC_RADIO) ? 0 : 1;
+	// if multi-plane, plane always be 0
+	if (mp_radio == 1) {
+		selected_plane = 0;
+	}
+	selected_blk = selected_blk * 2 + selected_plane;
+	
+	// setup subfeature (mode) of slc and multi-plane
 	if (selected_mode == 2) {
 		selected_mode += slc_mode;
+		if (mp_radio == 1) {
+			selected_mode += 2;
+		}
 	}
 
 	/*
@@ -483,7 +500,8 @@ void CBurnerFWDevToolDlg::OnBnClickedReadPageBtn()
 {
 	// check value
 	CString tmp;
-	DWORD selected_ce, selected_blk, selected_plane, selected_wl, selected_page, selected_mode, slc_mode;
+	DWORD selected_ce, selected_blk, selected_plane, selected_wl, selected_page, selected_mode;
+	DWORD slc_mode, mp_radio;
 
 	DWORD selected_device_idx = device_list_ctrl.GetCurSel();
 	if (selected_device_idx == CB_ERR) {
@@ -497,6 +515,13 @@ void CBurnerFWDevToolDlg::OnBnClickedReadPageBtn()
 		setup_btns(FALSE);
 		MessageBox(_T("Please select mode."), _T("Error"), MB_ICONERROR);
 		return;
+	}
+
+	UpdateData(TRUE);
+	slc_mode = (GetCheckedRadioButton(TYPE_TLC_RADIO, TYPE_SLC_RADIO) == TYPE_TLC_RADIO) ? 0 : 1;
+	mp_radio = (GetCheckedRadioButton(MP_WO_RADIO, MP_W_RADIO) == MP_WO_RADIO) ? 0 : 1;
+	if (selected_mode != 2) {
+		mp_radio = 0;
 	}
 
 	ce_edit_ctrl.GetWindowText(tmp);
@@ -514,7 +539,7 @@ void CBurnerFWDevToolDlg::OnBnClickedReadPageBtn()
 	selected_blk = _ttoi(tmp);
 
 	plane_edit_ctrl.GetWindowText(tmp);
-	if (tmp.IsEmpty()) {
+	if (tmp.IsEmpty() && mp_radio == 0) {
 		MessageBox(_T("Must input plane."), _T("Error"), MB_ICONERROR);
 		return;
 	}
@@ -528,12 +553,12 @@ void CBurnerFWDevToolDlg::OnBnClickedReadPageBtn()
 	selected_wl = _ttoi(tmp);
 
 	selected_page = page_list_ctrl.GetCurSel();
-	if (selected_page == CB_ERR) {
+	if (selected_page == CB_ERR && slc_mode == 0) {
 		MessageBox(_T("Must select page."), _T("Error"), MB_ICONERROR);
 		return;
 	}
 
-	if (selected_plane >= 2) {
+	if (selected_plane >= 2 && mp_radio == 0) {
 		MessageBox(_T("Only 2 plane per LUN."), _T("Error"), MB_ICONERROR);
 		return;
 	}
@@ -545,21 +570,28 @@ void CBurnerFWDevToolDlg::OnBnClickedReadPageBtn()
 		MessageBox(_T("The wl number is 384."), _T("Error"), MB_ICONERROR);
 		return;
 	}
+
+	// if multi-plane, plane always be 0
+	if (mp_radio == 1) {
+		selected_plane = 0;
+	}
 	selected_blk = selected_blk * 2 + selected_plane;
 
-	UpdateData(TRUE);
-	slc_mode = (GetCheckedRadioButton(TYPE_TLC_RADIO, TYPE_SLC_RADIO) == TYPE_TLC_RADIO) ? 0 : 1;
+	// setup subfeature (mode) of slc and multi-plane
 	if (selected_mode == 2) {
 		selected_mode += slc_mode;
+		if (mp_radio == 1) {
+			selected_mode += 2;
+		}
 	}
 
-	if (selected_mode == 0) {
+	if (selected_mode == 0) { // wordline of PIO mode
 		selected_wl = (selected_wl << 2) + (selected_page);
 	}
 	else if (slc_mode == 0 || selected_mode == 1) {
 		selected_wl = (selected_wl * 3) + (selected_page);
 	}
-	else {
+	else { // page of slc mode always be 0
 		selected_page = 0;
 	}
 
@@ -584,13 +616,14 @@ void CBurnerFWDevToolDlg::OnBnClickedReadPageBtn()
 	insert_msg_edit(_T("\tAP Key Set finished.\n"));
 
 	// issue read page
-	UINT buf_len;
+	UINT page_len, buf_len;
 	if (selected_mode == 0) { // PIO mode
-		buf_len = 18336;
+		page_len = 18336;
 	}
 	else {
-		buf_len = 16384;
+		page_len = 16384;
 	}
+	buf_len = (mp_radio == 0) ? page_len : page_len * 2;
 	LPBYTE read_buf = new BYTE[buf_len];
 	if (!issue_Read_Page(hDrive, selected_mode, selected_ce, selected_blk, selected_wl, read_buf, buf_len)) {
 		msg.Format(_T("\t%s failed.\n"), cur_op);
@@ -609,15 +642,46 @@ void CBurnerFWDevToolDlg::OnBnClickedReadPageBtn()
 	UINT err_byte, err_bit;
 	msg.Format(_T("\tShow read buffer (%d bytes).\n"), buf_len);
 	insert_msg_edit(msg);
-	show_buffer_result(read_buf, buf_len, 32);
-	if (diff_page_pattern(selected_page + 1, read_buf, buf_len, &err_byte, &err_bit)) {
-		insert_msg_edit(_T("\tNo error byte.\n"));
+	if (mp_radio == 0) {
+		show_buffer_result(read_buf, buf_len, 32);
+		if (diff_page_pattern(selected_page + 1, read_buf, buf_len, &err_byte, &err_bit)) {
+			insert_msg_edit(_T("\tNo error byte.\n"));
+		}
+		else {
+			msg.Format(_T("\tError byte: %d.\n"), err_byte);
+			insert_msg_edit(msg);
+			msg.Format(_T("\tError bit: %d.\n"), err_bit);
+			insert_msg_edit(msg);
+		}
 	}
 	else {
-		msg.Format(_T("\tError byte: %d.\n"), err_byte);
-		insert_msg_edit(msg);
-		msg.Format(_T("\tError bit: %d.\n"), err_bit);
-		insert_msg_edit(msg);
+		show_buffer_result(read_buf, page_len, 32);
+		insert_buffer_result_edit(_T("-------------------------------------------------------------------------\n"));
+		show_buffer_result(read_buf + page_len, page_len, 32, FALSE);
+		
+		// diff plane 0
+		insert_msg_edit(_T("\tDiff plane 0.\n"));
+		if (diff_page_pattern(selected_page + 1, read_buf, page_len, &err_byte, &err_bit)) {
+			insert_msg_edit(_T("\tNo error byte.\n"));
+		}
+		else {
+			msg.Format(_T("\tError byte: %d.\n"), err_byte);
+			insert_msg_edit(msg);
+			msg.Format(_T("\tError bit: %d.\n"), err_bit);
+			insert_msg_edit(msg);
+		}
+
+		// diff plane 1
+		insert_msg_edit(_T("\tDiff plane 1.\n"));
+		if (diff_page_pattern(selected_page + 1, read_buf + page_len, page_len, &err_byte, &err_bit)) {
+			insert_msg_edit(_T("\tNo error byte.\n"));
+		}
+		else {
+			msg.Format(_T("\tError byte: %d.\n"), err_byte);
+			insert_msg_edit(msg);
+			msg.Format(_T("\tError bit: %d.\n"), err_bit);
+			insert_msg_edit(msg);
+		}
 	}
 	delete[] read_buf;
 
@@ -633,7 +697,8 @@ void CBurnerFWDevToolDlg::OnBnClickedWriteBtn()
 {
 	// check value
 	CString tmp;
-	DWORD selected_ce, selected_blk, selected_plane, selected_wl, selected_mode, slc_mode;
+	DWORD selected_ce, selected_blk, selected_plane, selected_wl, selected_mode;
+	DWORD slc_mode, mp_radio;
 
 	DWORD selected_device_idx = device_list_ctrl.GetCurSel();
 	if (selected_device_idx == CB_ERR) {
@@ -648,6 +713,10 @@ void CBurnerFWDevToolDlg::OnBnClickedWriteBtn()
 		MessageBox(_T("Please select mode."), _T("Error"), MB_ICONERROR);
 		return;
 	}
+
+	UpdateData(TRUE);
+	slc_mode = (GetCheckedRadioButton(TYPE_TLC_RADIO, TYPE_SLC_RADIO) == TYPE_TLC_RADIO) ? 0 : 1;
+	mp_radio = (GetCheckedRadioButton(MP_WO_RADIO, MP_W_RADIO) == MP_WO_RADIO) ? 0 : 1;
 
 	ce_edit_ctrl.GetWindowText(tmp);
 	if (tmp.IsEmpty()) {
@@ -664,7 +733,7 @@ void CBurnerFWDevToolDlg::OnBnClickedWriteBtn()
 	selected_blk = _ttoi(tmp);
 
 	plane_edit_ctrl.GetWindowText(tmp);
-	if (tmp.IsEmpty()) {
+	if (tmp.IsEmpty() && mp_radio == 0) {
 		MessageBox(_T("Must input plane."), _T("Error"), MB_ICONERROR);
 		return;
 	}
@@ -677,7 +746,7 @@ void CBurnerFWDevToolDlg::OnBnClickedWriteBtn()
 	}
 	selected_wl = _ttoi(tmp);
 
-	if (selected_plane >= 2) {
+	if (selected_plane >= 2 && mp_radio == 0) {
 		MessageBox(_T("Only 2 plane per LUN."), _T("Error"), MB_ICONERROR);
 		return;
 	}
@@ -689,14 +758,21 @@ void CBurnerFWDevToolDlg::OnBnClickedWriteBtn()
 		MessageBox(_T("The wl number is 384."), _T("Error"), MB_ICONERROR);
 		return;
 	}
+
+	// if multi-plane, plane always be 0
+	if (mp_radio == 1) {
+		selected_plane = 0;
+	}
 	selected_blk = selected_blk * 2 + selected_plane;
 
-	UpdateData(TRUE);
-	slc_mode = (GetCheckedRadioButton(TYPE_TLC_RADIO, TYPE_SLC_RADIO) == TYPE_TLC_RADIO) ? 0 : 1;
+	// setup subfeature (mode) of slc and multi-plane
 	if (selected_mode == 2) {
 		selected_mode += slc_mode;
+		if (mp_radio == 1) {
+			selected_mode += 2;
+		}
 	}
-	else {
+	else { // no slc mode in PIO and FPU
 		slc_mode = 0;
 	}
 
