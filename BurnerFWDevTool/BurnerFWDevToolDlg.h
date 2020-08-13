@@ -60,6 +60,8 @@ public:
 	CComboBox mode_list_ctrl;
 	CButton erase_btn_ctrl;
 	CButton read_page_btn_ctrl;
+	CButton cache_read_page_btn_ctrl;
+	CButton cache_write_btn_ctrl;
 	CButton write_btn_ctrl;
 	afx_msg void OnCbnDropdownList();
 	afx_msg void OnCbnSelchangeList();
@@ -68,4 +70,6 @@ public:
 	afx_msg void OnBnClickedEraseBtn();
 	afx_msg void OnBnClickedReadPageBtn();
 	afx_msg void OnBnClickedWriteBtn();
+	afx_msg void OnBnClickedCacheReadPageBtn();
+	afx_msg void OnBnClickedCacheWriteBtn();
 };

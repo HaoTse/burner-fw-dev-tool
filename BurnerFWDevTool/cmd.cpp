@@ -185,7 +185,7 @@ BOOL issue_Erase(HANDLE hDrive, UINT mode, UINT ce, UINT blk)
 	return ret;
 }
 
-BOOL issue_Read_Page(HANDLE hDrive, UINT mode, UINT ce, UINT blk, UINT page, LPBYTE read_data_buf, UINT read_len)
+BOOL issue_Read_Page(HANDLE hDrive, UINT mode, UINT ce, UINT blk, UINT page, LPBYTE read_data_buf, UINT read_len, UINT cache_num)
 {
 	/*
 	 * data out (read data)
@@ -214,6 +214,11 @@ BOOL issue_Read_Page(HANDLE hDrive, UINT mode, UINT ce, UINT blk, UINT page, LPB
 	transf_buf[0x46] = 0xf7; // CRC
 	transf_buf[0x47] = 0xd4;
 
+	// when cache mode, set repeat number
+	if (mode == 0x6 || mode == 0x7) {
+		transf_buf[0x42] = cache_num;
+	}
+
 	BOOL ret = FALSE;
 	do {
 		// step 1 - NVM Command Set Payload
@@ -239,7 +244,7 @@ BOOL issue_Read_Page(HANDLE hDrive, UINT mode, UINT ce, UINT blk, UINT page, LPB
 	return ret;
 }
 
-BOOL issue_Write(HANDLE hDrive, UINT mode, UINT ce, UINT blk, UINT page, LPBYTE write_data_buf, UINT write_len)
+BOOL issue_Write(HANDLE hDrive, UINT mode, UINT ce, UINT blk, UINT page, LPBYTE write_data_buf, UINT write_len, UINT cache_num)
 {
 	/*
 	 * data in (write data)
@@ -267,6 +272,11 @@ BOOL issue_Write(HANDLE hDrive, UINT mode, UINT ce, UINT blk, UINT page, LPBYTE 
 	transf_buf[0x43] = (byte)(ce & 0xff); // CDW14[3] - ce
 	transf_buf[0x46] = 0xf7; // CRC
 	transf_buf[0x47] = 0xd4;
+
+	// when cache mode, set repeat number
+	if (mode == 0x6 || mode == 0x7) {
+		transf_buf[0x42] = cache_num;
+	}
 
 	BOOL ret = FALSE;
 	do {

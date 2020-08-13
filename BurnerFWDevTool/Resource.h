@@ -25,9 +25,11 @@
 #define TYPE_SLC_RADIO                  1019
 #define TYPE_RADIO_GROUP                1020
 #define MP_RADIO_GROUP                  1021
-#define TYPE_TLC_RADIO2                 1022
 #define MP_WO_RADIO                     1022
 #define MP_W_RADIO                      1023
+#define CACHE_READ_PAGE_BTN             1024
+#define CACHE_READ_PAGE_BTN2            1025
+#define CACHE_WRITE_BTN                 1025
 
 // Next default values for new objects
 // 
